@@ -1,4 +1,6 @@
-# Architecture — MVP v0.1
+# Architecture - MVP v0.1
+
+> Scope: voice capture, transcription, speech parsing, recommendation generation, and recommendation review are deferred to a future Azure version. The data-flow and cloud modules below describe planned architecture, not features in this offline runtime.
 
 ## Context
 ```mermaid
@@ -14,11 +16,13 @@ flowchart TD
 ```
 
 ## Logical modules
-- Mobile: screens for Today, Workout, Speak/Confirm, Measurements, Food, Restrictions, Progress, Settings/Privacy.
+- Implemented foundation: `src/PersonalFitnessAgent.Core` is a platform-independent .NET 10 library; `tests/PersonalFitnessAgent.Core.Tests` contains automated tests. The initial core contract preserves event instants in UTC with the original local offset.
+- Implemented offline vertical slice: `src/PersonalFitnessAgent.Infrastructure.Sqlite` owns versioned SQLite migrations, optimistic revisions, audit and outbox records, and JSON backup/restore; `src/PersonalFitnessAgent.App` is the Android MAUI client with local-only manual workout, check-in, restriction, and progress flows.
+- Mobile (implemented): Today, Workout, Check-in, Restrictions, Progress, export/restore. Voice, recommendation generation/review and settings are future scope.
 - Core.Domain: Exercise, Session, Set, Food, Symptom, RestrictionPolicy, Recommendation, AuditEvent.
-- Core.Application: commands, validation, recommendations orchestration, deterministic parser, progression.
-- Analytics: averages, rolling medians, trend quality, estimated ranges, rule-versioned suggestions.
-- Infrastructure.Mobile: SQLite, migrations, secure storage, background sync queue and voice capture.
+- Core.Application (implemented subset): validation and weekly analytics. Deterministic speech parsing and progression recommendation generation are future scope.
+- Analytics (implemented subset): weekly medians, sparse-data warnings, exercise trends and 28-day weight comparison. Energy estimates and progression recommendations are future scope.
+- Mobile persistence (implemented): SQLite records, migrations, audit, local outbox and backup/restore. Secure storage, voice capture and remote sync adapters are future scope.
 - Speech.Contracts: normalized transcription envelope and provider interface.
 - Cloud.SpeechProxy: authenticated Azure Function; checks consent token, size, quotas and provider credentials; returns transcript with metadata.
 - Infrastructure.Server (optional): sync API, idempotent event ledger and encrypted backup. Not required for MVP launch.

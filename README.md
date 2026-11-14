@@ -1,8 +1,8 @@
 # Personal Fitness Agent
 
-Aplicativo pessoal de acompanhamento de treinos, alimentação, recuperação e evolução física, com registro por voz e recomendações explicáveis.
+Aplicativo offline-first para registrar treinos, alimentacao, recuperacao e evolucao. Voz, geracao e revisao de recomendacoes ficam para uma versao futura integrada ao Azure.
 
-> **Status:** specification-first / documentação inicial. Nenhuma funcionalidade está implementada.
+> **Status:** MVP offline em implementacao; o build Android final depende do Android SDK e JDK locais. Consulte o [guia de desenvolvimento](docs/DEVELOPMENT.md) para validacoes e limitacoes atuais.
 
 ## Princípios
 - **Offline-first:** registrar e consultar dados essenciais no Android mesmo sem rede.
@@ -13,6 +13,7 @@ Aplicativo pessoal de acompanhamento de treinos, alimentação, recuperação e 
 - **Baixo custo:** processamento de voz sob demanda, limites de uso e nenhuma VM obrigatória 24/7.
 
 ## Documentação
+- [Estrutura e execução local](docs/DEVELOPMENT.md)
 - [Contexto e escopo](docs/PROJECT_CONTEXT.md)
 - [Requisitos e critérios de aceite](docs/REQUIREMENTS.md)
 - [Arquitetura](docs/ARCHITECTURE.md)
@@ -20,6 +21,7 @@ Aplicativo pessoal de acompanhamento de treinos, alimentação, recuperação e 
 - [Fluxo de voz](docs/VOICE_PIPELINE.md)
 - [Motor de restrições](docs/RESTRICTION_ENGINE.md)
 - [Análises e estimativas](docs/ANALYTICS.md)
+- [Catálogo alimentar offline](docs/FOOD_CATALOG.md)
 - [Segurança, privacidade e custos](docs/SECURITY_AND_COST.md)
 - [Backlog e sequenciamento](docs/BACKLOG.md)
 - [Instruções dos agentes](AGENTS.md)

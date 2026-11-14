@@ -1,5 +1,9 @@
 # Roadmap and agent work packages
 
+## Project-owner scope update
+
+The current offline MVP excludes voice capture/transcription/parsing and recommendation generation/review. Revisit the voice milestones and PFA-009 when the owner implements the Azure version and satisfies ADR-0002's provider, consent, privacy, and budget gates. Manual entry and local restriction evaluation remain available without Azure.
+
 Issues are the canonical task tracker. Use IDs for stable dependencies.
 
 ## Milestone 0 — Foundation

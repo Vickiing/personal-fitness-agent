@@ -1,0 +1,23 @@
+# .NET build output
+**/bin/
+**/obj/
+.vs/
+.idea/
+
+# IDE and local user state
+*.user
+*.suo
+*.rsuser
+
+# Local app data and personal exports
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+*.backup
+*.bak
+exports/
+
+# Local Android tooling
+.android-sdk/

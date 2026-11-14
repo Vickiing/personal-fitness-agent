@@ -21,7 +21,7 @@
 
 ## Proposed records
 ```text
-Exercise(Id, Name, MovementPatterns[], Equipment[], ContraindicationTags[])
+Exercise(Id, Name, MovementPatterns[], Equipment[], UsesExternalLoad?, Region?, Position?, RangeOfMotion?, ContraindicationTags[])
 WorkoutPlan(Id, Version, Label, Exercises[])
 WorkoutSession(Id, PlanId, PlanVersion, StartedUtc, Offset, Status)
 ExerciseSet(Id, SessionId, ExerciseId, SetIndex, LoadKg?, Reps?, Rir?, Notes)

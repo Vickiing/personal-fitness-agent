@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PersonalFitnessAgent.App/PersonalFitnessAgent.App.csproj" />
+    <Project Path="src/PersonalFitnessAgent.Core/PersonalFitnessAgent.Core.csproj" />
+    <Project Path="src/PersonalFitnessAgent.Infrastructure.Sqlite/PersonalFitnessAgent.Infrastructure.Sqlite.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PersonalFitnessAgent.Core.Tests/PersonalFitnessAgent.Core.Tests.csproj" />
+  </Folder>
+</Solution>

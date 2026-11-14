@@ -24,6 +24,7 @@ public sealed class CheckInPage : ContentPage
     private readonly VerticalStackLayout _foodEntries = new() { Spacing = 6 };
     private readonly VerticalStackLayout _symptomEntries = new() { Spacing = 6 };
     private Guid? _editingFoodId;
+    private Guid? _editingCatalogFoodId;
     private Guid? _editingSymptomId;
 
     public CheckInPage()
@@ -134,10 +135,22 @@ public sealed class CheckInPage : ContentPage
 
     private async void SaveCatalogFood()
     {
-        if (_foodCatalog.SelectedItem is not FoodCatalogItem item) { _status.Text = "Selecione um alimento do catálogo."; return; }
         try
         {
             var grams = Ui.Decimal(_foodGrams.Text, "Peso do alimento");
+            if (_editingCatalogFoodId is Guid foodId)
+            {
+                var updated = App.Data.UpdateCatalogFoodQuantity(LogDate, foodId, grams);
+                _editingCatalogFoodId = null;
+                _foodGrams.Text = "";
+                RefreshEntries();
+                var corrected = updated.Foods.Single(food => food.Id == foodId);
+                _status.Text = corrected.EnergyKcal is null
+                    ? $"{corrected.Name} atualizado sem quantidade; energia desconhecida."
+                    : $"Porção corrigida. Energia estimada: {corrected.EnergyKcal:0.#} kcal.";
+                return;
+            }
+            if (_foodCatalog.SelectedItem is not FoodCatalogItem item) { _status.Text = "Selecione um alimento do catálogo."; return; }
             App.Data.SaveCatalogFood(LogDate, item, grams);
             _foodGrams.Text = "";
             RefreshEntries();
@@ -158,7 +171,9 @@ public sealed class CheckInPage : ContentPage
         _waist.Text = log?.WaistCm?.ToString(System.Globalization.CultureInfo.CurrentCulture);
         _activity.SelectedIndex = log?.Activity ?? 0;
         _food.Text = _symptom.Text = _region.Text = _severity.Text = _patterns.Text = "";
-        _editingFoodId = _editingSymptomId = null;
+        _foodGrams.Text = "";
+        _foodCatalog.SelectedItem = null;
+        _editingFoodId = _editingCatalogFoodId = _editingSymptomId = null;
         RefreshEntries();
     }
 
@@ -171,7 +186,9 @@ public sealed class CheckInPage : ContentPage
         {
             var row = new HorizontalStackLayout { Spacing = 6 };
             row.Children.Add(Ui.Body(food.Quantified ? $"{food.Name} - {food.Description}" : $"{food.Name} - sem quantidade"));
-            row.Children.Add(Ui.Button("Editar nome", (_, _) => { _editingFoodId = food.Id; _food.Text = food.Name; _status.Text = "Edite o nome e salve a nota."; }));
+            row.Children.Add(Ui.Button("Editar nome", (_, _) => { _editingCatalogFoodId = null; _editingFoodId = food.Id; _food.Text = food.Name; _status.Text = "Edite o nome e salve a nota."; }));
+            if (food.CatalogCode is not null && FoodCatalog.Items.Any(item => item.Code == food.CatalogCode))
+                row.Children.Add(Ui.Button("Editar porção", (_, _) => LoadFoodForPortionEdit(food), true));
             row.Children.Add(Ui.Button("Remover", async (_, _) => await DeleteFood(food.Id), true));
             _foodEntries.Children.Add(row);
         }
@@ -187,6 +204,15 @@ public sealed class CheckInPage : ContentPage
             _symptomEntries.Children.Add(row);
         }
         if (_symptomEntries.Children.Count == 0) _symptomEntries.Children.Add(Ui.Body("Nenhum sintoma registrado hoje."));
+    }
+
+    private void LoadFoodForPortionEdit(FoodDto food)
+    {
+        _editingFoodId = null;
+        _editingCatalogFoodId = food.Id;
+        _foodCatalog.SelectedItem = FoodCatalog.Items.First(item => item.Code == food.CatalogCode);
+        _foodGrams.Text = food.Amount?.ToString(System.Globalization.CultureInfo.CurrentCulture);
+        _status.Text = "Corrija os gramas. Deixe em branco para marcar a quantidade como desconhecida.";
     }
 
     private void LoadSymptomForEdit(SymptomDto symptom)

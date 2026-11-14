@@ -108,6 +108,40 @@ public sealed class FitnessDataServiceTests
     }
 
     [Fact]
+    public void CatalogFoodPortionCanBeCorrectedWithoutChangingItsIdentity()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"pfa-{Guid.NewGuid():N}.db");
+        try
+        {
+            using var store = new SqliteLocalStore(path);
+            var service = new FitnessDataService(store);
+            var date = new DateOnly(2026, 11, 14);
+            var original = service.SaveCatalogFood(date, FoodCatalog.Items[0], 100).Foods.Single();
+
+            var corrected = service.UpdateCatalogFoodQuantity(date, original.Id, 50).Foods.Single();
+            Assert.Equal(original.Id, corrected.Id);
+            Assert.Equal(50m, corrected.Amount);
+            Assert.Equal("50 g", corrected.Description);
+            Assert.Equal(64m, corrected.EnergyKcal);
+            Assert.Equal("TACO-0003", corrected.CatalogCode);
+
+            var unknown = service.UpdateCatalogFoodQuantity(date, original.Id, null).Foods.Single();
+            Assert.False(unknown.Quantified);
+            Assert.Null(unknown.Amount);
+            Assert.Null(unknown.EnergyKcal);
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                service.UpdateCatalogFoodQuantity(date, original.Id, -1));
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            if (File.Exists(path)) File.Delete(path);
+            if (File.Exists(path + "-shm")) File.Delete(path + "-shm");
+            if (File.Exists(path + "-wal")) File.Delete(path + "-wal");
+        }
+    }
+
+    [Fact]
     public void LegacySymptomIdsAreStableWhenLoadedFromOlderContracts()
     {
         var path = Path.Combine(Path.GetTempPath(), $"pfa-{Guid.NewGuid():N}.db");

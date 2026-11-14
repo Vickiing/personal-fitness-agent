@@ -261,6 +261,29 @@ public sealed class FitnessDataService
         return updated;
     }
 
+    public DailyLogDto UpdateCatalogFoodQuantity(DateOnly date, Guid foodId, decimal? grams)
+    {
+        if (grams < 0) throw new ArgumentOutOfRangeException(nameof(grams));
+        var log = DailyLogs.FirstOrDefault(item => item.LocalDate == date) ?? throw new KeyNotFoundException("Daily log was not found.");
+        var food = log.Foods.FirstOrDefault(item => item.Id == foodId) ?? throw new KeyNotFoundException("Food entry was not found.");
+        var catalogItem = FoodCatalog.Items.FirstOrDefault(item => item.Code == food.CatalogCode)
+            ?? throw new InvalidOperationException("Only an unchanged catalog food has an editable catalog quantity.");
+        var updated = log with
+        {
+            Foods = log.Foods.Select(item => item.Id != foodId ? item : item with
+            {
+                Description = grams is null ? "" : $"{grams.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)} g",
+                Quantified = grams is not null,
+                Amount = grams,
+                Unit = grams is null ? null : "g",
+                EnergyKcal = FoodCatalog.EstimateEnergy(catalogItem, grams)?.Value
+            }).ToArray()
+        };
+        Save("daily-log", log.Id, updated, Find<DailyLogDto>("daily-log", log.Id)?.Revision ?? 0,
+            "food.catalog_quantity_corrected", foodId.ToString("D"));
+        return updated;
+    }
+
     public DailyLogDto DeleteFoodEntry(DateOnly date, Guid foodId)
     {
         var log = DailyLogs.FirstOrDefault(item => item.LocalDate == date) ?? throw new KeyNotFoundException("Daily log was not found.");

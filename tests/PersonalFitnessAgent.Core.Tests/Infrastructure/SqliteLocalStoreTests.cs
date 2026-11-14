@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using PersonalFitnessAgent.Infrastructure.Sqlite;
 
 namespace PersonalFitnessAgent.Core.Tests.Infrastructure;
@@ -70,6 +71,22 @@ public sealed class SqliteLocalStoreTests : IDisposable
         _store.RestoreBackup(json);
         Assert.Equal(id, Assert.Single(_store.ReadAll("exercise")).Id);
         Assert.Contains("synthetic.created", _store.ExportBackup());
+    }
+
+    [Fact]
+    public void BackupPreviewRejectsInvalidRecordOffsetAndNullRecords()
+    {
+        using var payload = JsonDocument.Parse("""{"synthetic":true}""");
+        _store.Save("exercise", Guid.NewGuid(), 1, payload.RootElement, DateTimeOffset.UtcNow, 0, 0);
+        var exported = _store.ExportBackup();
+
+        var wrongOffset = JsonNode.Parse(exported)!;
+        wrongOffset["records"]![0]!["originalOffsetMinutes"] = 900;
+        Assert.False(_store.PreviewBackup(wrongOffset.ToJsonString()).IsValid);
+
+        var nullRecord = JsonNode.Parse(exported)!;
+        nullRecord["records"]![0] = null;
+        Assert.False(_store.PreviewBackup(nullRecord.ToJsonString()).IsValid);
     }
 
     [Fact]

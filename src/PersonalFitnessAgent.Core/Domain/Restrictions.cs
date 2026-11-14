@@ -63,7 +63,10 @@ public static class RestrictionEngine
             var match = Match(policy, exercise);
             if (match == MatchResult.Match) matched.Add(policy);
             else if (match == MatchResult.Unknown) unknown.Add(policy);
-            if (policy.Status == RestrictionStatus.PendingReview) unknown.Add(policy);
+            // A pending policy only requires review for exercises in its scope, or when
+            // missing metadata prevents us from ruling out a match.
+            if (policy.Status == RestrictionStatus.PendingReview && match != MatchResult.NoMatch)
+                unknown.Add(policy);
         }
 
         var conflicts = matched.Where(p => p.Source == RestrictionSource.UserReport).Any(user =>

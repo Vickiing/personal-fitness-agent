@@ -34,6 +34,35 @@ public class RestrictionEngineTests
     }
 
     [Fact]
+    public void PendingPolicyDoesNotAffectExercisesOutsideItsKnownScope()
+    {
+        var policy = new RestrictionPolicy(Guid.NewGuid(), "Pending squat review", RestrictionAction.Block,
+            RestrictionSource.Clinician, "Awaiting review", RestrictionStatus.PendingReview,
+            movementPattern: "squat");
+        var context = new ExerciseContext(Guid.NewGuid(), "Bench press", new HashSet<string> { "horizontal-press" },
+            new HashSet<string> { "barbell" }, true);
+
+        var result = RestrictionEngine.Evaluate(context, [policy], Now);
+
+        Assert.Equal(RestrictionDecision.NoPolicyMatched, result.Decision);
+        Assert.Empty(result.PolicyIds);
+    }
+
+    [Fact]
+    public void PendingPolicyRequiresReviewWhenExerciseCouldMatchItsScope()
+    {
+        var policy = new RestrictionPolicy(Guid.NewGuid(), "Pending squat review", RestrictionAction.Block,
+            RestrictionSource.Clinician, "Awaiting review", RestrictionStatus.PendingReview,
+            movementPattern: "squat");
+        var context = new ExerciseContext(Guid.NewGuid(), "Unknown exercise", null, null, null);
+
+        var result = RestrictionEngine.Evaluate(context, [policy], Now);
+
+        Assert.Equal(RestrictionDecision.RequiresReview, result.Decision);
+        Assert.Contains(policy.Id, result.PolicyIds);
+    }
+
+    [Fact]
     public void ReportsUserAndClinicianConflict()
     {
         var policies = new[]

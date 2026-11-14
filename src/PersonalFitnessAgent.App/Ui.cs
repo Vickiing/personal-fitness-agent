@@ -1,5 +1,6 @@
 using System.Globalization;
 using Microsoft.Maui.Graphics;
+using PersonalFitnessAgent.Core.Application;
 
 namespace PersonalFitnessAgent.App;
 
@@ -76,7 +77,7 @@ internal static class Ui
     public static decimal? Decimal(string? value, string field)
     {
         if (string.IsNullOrWhiteSpace(value)) return null;
-        if (!decimal.TryParse(value, NumberStyles.Number, CultureInfo.CurrentCulture, out var number) || number < 0)
+        if (!LocalizedDecimalParser.TryParseNonNegative(value, CultureInfo.CurrentCulture, out var number))
             throw new FormatException($"{field}: informe um número válido usando o separador decimal do aparelho.");
         return number;
     }

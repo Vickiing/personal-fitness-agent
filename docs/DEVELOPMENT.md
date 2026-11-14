@@ -16,4 +16,6 @@ The core preserves an explicitly UTC instant together with its original local of
 
 The app has no network permission and no cloud runtime calls. Voice capture, transcription, deterministic speech parsing, recommendation generation, and recommendation review are explicitly deferred to a future Azure version by the project owner. Manual offline entry remains the MVP path. The local SQLite file is protected by Android private app storage; SQLCipher is not configured. ADR-0002 remains proposed pending the provider benchmark and approval gate. Delayed symptoms are recorded and linked locally; recommendation suspension is not active while recommendation behavior is deferred. The Android app source compiled in a local MAUI-reference harness and XAML/XML files were parsed, but a full Android build and device validation require the developer JDK and Android SDK.
 
+Manual decimal fields use the device culture's decimal separator and reject grouping separators. For example, in `pt-BR`, `12,5` is accepted while `12.5` is rejected instead of being silently interpreted as `125`.
+
 Current local validation: `dotnet test tests/PersonalFitnessAgent.Core.Tests/PersonalFitnessAgent.Core.Tests.csproj -m:1 -v:minimal` (31 tests); app source harness build (0 warnings/errors). These checks do not replace a full Android build.

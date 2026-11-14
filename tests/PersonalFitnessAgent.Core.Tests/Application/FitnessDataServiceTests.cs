@@ -38,6 +38,47 @@ public sealed class FitnessDataServiceTests
     }
 
     [Fact]
+    public void ImportedWorkoutSheetPersistsLocallyAndReplacesPreviousImport()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"pfa-{Guid.NewGuid():N}.db");
+        var importedAt = DateTimeOffset.UtcNow;
+        var first = new WorkoutSheet(Guid.NewGuid(), importedAt,
+        [
+            new WorkoutSheetDay("A", "Plan A", "Synthetic summary",
+                [new WorkoutSheetExercise(1, "Synthetic row", "3", "8-12", "60 s", "Keep torso steady.", "Main", "Record locally")],
+                [])
+        ]);
+        try
+        {
+            WorkoutSheet saved;
+            using (var store = new SqliteLocalStore(path))
+            {
+                var service = new FitnessDataService(store);
+                saved = service.ImportWorkoutSheet(first);
+            }
+            using (var store = new SqliteLocalStore(path))
+            {
+                var service = new FitnessDataService(store);
+                var restored = Assert.IsType<WorkoutSheet>(service.ImportedWorkoutSheet);
+                Assert.Equal(saved.Id, restored.Id);
+                Assert.Equal("Synthetic row", restored.Days.Single().Exercises.Single().Name);
+
+                var replacement = first with { Id = Guid.NewGuid() };
+                var replaced = service.ImportWorkoutSheet(replacement);
+                Assert.Equal(saved.Id, replaced.Id);
+                Assert.Single(service.ImportedWorkoutSheet!.Days);
+            }
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            if (File.Exists(path)) File.Delete(path);
+            if (File.Exists(path + "-shm")) File.Delete(path + "-shm");
+            if (File.Exists(path + "-wal")) File.Delete(path + "-wal");
+        }
+    }
+
+    [Fact]
     public void MeasurementCorrectionCanRestoreUnknownWithoutDeletingFoodsOrSymptoms()
     {
         var path = Path.Combine(Path.GetTempPath(), $"pfa-{Guid.NewGuid():N}.db");

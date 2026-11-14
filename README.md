@@ -7,10 +7,10 @@ Aplicativo offline-first para registrar treinos, alimentacao, recuperacao e evol
 ## Princípios
 - **Offline-first:** registrar e consultar dados essenciais no Android mesmo sem rede.
 - **Núcleo determinístico:** progressão, estimativas, regras de restrições e análises devem ser testáveis, sem dependência de LLM.
-- **Voz desacoplada:** provedores de Speech-to-Text intercambiáveis; interpretação por gramática/regras no MVP.
+- **Demonstrações locais:** ficha, imagens vetoriais e animações funcionam sem depender de mídia externa.
 - **Privacidade por padrão:** dados pessoais de saúde permanecem fora deste repositório público e de logs de desenvolvimento.
 - **Segurança:** o sistema não diagnostica, não prescreve reabilitação e nunca altera automaticamente exercícios com restrições.
-- **Baixo custo:** processamento de voz sob demanda, limites de uso e nenhuma VM obrigatória 24/7.
+- **Sem chamadas de nuvem no MVP:** integrações Azure ficam para uma versão futura após os gates dos ADRs.
 
 ## Documentação
 - [Estrutura e execução local](docs/DEVELOPMENT.md)
@@ -21,6 +21,7 @@ Aplicativo offline-first para registrar treinos, alimentacao, recuperacao e evol
 - [Fluxo de voz](docs/VOICE_PIPELINE.md)
 - [Motor de restrições](docs/RESTRICTION_ENGINE.md)
 - [Análises e estimativas](docs/ANALYTICS.md)
+- [UX da ficha de treino A/B](docs/WORKOUT_VIEWER_UX.md)
 - [Catálogo alimentar offline](docs/FOOD_CATALOG.md)
 - [Segurança, privacidade e custos](docs/SECURITY_AND_COST.md)
 - [Backlog e sequenciamento](docs/BACKLOG.md)
@@ -28,7 +29,7 @@ Aplicativo offline-first para registrar treinos, alimentacao, recuperacao e evol
 - [Registros de decisão](docs/adr/README.md)
 
 ## Proposta técnica
-Android (.NET MAUI) + SQLite local + Core/Analytics em C# + API Azure Functions para transcrição em nuvem sem expor credenciais. Azure Speech e outro provedor de STT serão avaliados empiricamente. LLM não é exigido no MVP. Os serviços cloud só são acionados quando necessário.
+Android (.NET MAUI) + SQLite local + Core/Analytics em C#. Azure Functions e Speech são uma proposta futura, fora do runtime atual e dependentes dos gates de privacidade, orçamento e provedor dos ADRs. LLM não é exigido no MVP.
 
 ## Próximos passos
 Consultar os work items em **Issues** e seguir a ordem de dependências indicada em `docs/BACKLOG.md`. Para executar tarefas, os agentes devem ler `AGENTS.md` antes de modificar código.

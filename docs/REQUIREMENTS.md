@@ -40,3 +40,9 @@ Identifiers are stable; treat these as implementation contracts.
 8. Exceeded STT monthly cap: explain limit and allow manual entry.
 9. Repeated sync event: one record, one acknowledgment; no duplicates.
 10. Export/restore: record IDs and audit histories remain intact.
+
+## Additional user-requested acceptance: workout-sheet viewer
+- Select an XLSX file explicitly; read only its A/B workout tabs locally and retain the normalized view in app-private SQLite.
+- Switch between A/B without a network request; keep the exercise list smooth with a virtualized mobile list.
+- Each exercise exposes a detail action with a readable illustration, on-demand animated movement demonstration, and numbered steps.
+- The source workbook is user data and must not be checked into source control, emitted to logs, or uploaded by the app.

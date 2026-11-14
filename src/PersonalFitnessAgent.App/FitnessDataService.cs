@@ -34,7 +34,7 @@ public sealed record WorkoutScheduleDto(Guid Id, int Version, DayOfWeek[] Planne
 
 public sealed class FitnessDataService
 {
-    private const int ContractVersion = 4;
+    private const int ContractVersion = 5;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private readonly SqliteLocalStore _store;
 
@@ -49,6 +49,8 @@ public sealed class FitnessDataService
     public IReadOnlyList<RestrictionDto> Restrictions => Read<RestrictionDto>("restriction").GroupBy(policy => policy.Id)
         .Select(group => group.OrderByDescending(policy => policy.Version).First()).ToArray();
     public WorkoutScheduleDto? Schedule => Read<WorkoutScheduleDto>("schedule").OrderByDescending(schedule => schedule.Version).FirstOrDefault();
+    public WorkoutSheet? ImportedWorkoutSheet => Read<WorkoutSheet>("workout-sheet")
+        .OrderByDescending(sheet => sheet.ImportedAtUtc).FirstOrDefault();
     public PlanDto? NextPlan
     {
         get
@@ -362,6 +364,18 @@ public sealed class FitnessDataService
         Save("schedule", Guid.NewGuid(), dto, auditAction: "schedule.versioned",
             auditDetail: string.Join(",", dto.PlannedWeekdays));
         return dto;
+    }
+
+    public WorkoutSheet ImportWorkoutSheet(WorkoutSheet sheet)
+    {
+        ArgumentNullException.ThrowIfNull(sheet);
+        var existing = ImportedWorkoutSheet is { } current
+            ? Find<WorkoutSheet>("workout-sheet", current.Id)
+            : null;
+        var imported = sheet with { Id = existing?.Value.Id ?? Guid.NewGuid(), ImportedAtUtc = DateTimeOffset.UtcNow };
+        Save("workout-sheet", imported.Id, imported, existing?.Revision ?? 0,
+            auditAction: "workout_sheet.imported", auditDetail: "A/B workbook");
+        return imported;
     }
 
     public string ExportJson() => _store.ExportBackup();

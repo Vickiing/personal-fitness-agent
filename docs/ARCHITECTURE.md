@@ -17,12 +17,13 @@ flowchart TD
 
 ## Logical modules
 - Implemented foundation: `src/PersonalFitnessAgent.Core` is a platform-independent .NET 10 library; `tests/PersonalFitnessAgent.Core.Tests` contains automated tests. The initial core contract preserves event instants in UTC with the original local offset.
-- Implemented offline vertical slice: `src/PersonalFitnessAgent.Infrastructure.Sqlite` owns versioned SQLite migrations, optimistic revisions, audit and outbox records, and JSON backup/restore; `src/PersonalFitnessAgent.App` is the Android MAUI client with local-only manual workout, check-in, restriction, and progress flows.
+- Implemented offline vertical slice: `src/PersonalFitnessAgent.Infrastructure.Sqlite` owns versioned SQLite migrations, optimistic revisions, audit and outbox records, and JSON backup/restore; `src/PersonalFitnessAgent.App` is the Android MAUI client with local-only manual workout, check-in, restriction, progress, and read-only imported A/B workout-sheet viewer flows.
 - Mobile (implemented): Today, Workout, Check-in, Restrictions, Progress, export/restore. Voice, recommendation generation/review and settings are future scope.
 - Core.Domain: Exercise, Session, Set, Food, Symptom, RestrictionPolicy, Recommendation, AuditEvent.
 - Core.Application (implemented subset): validation and weekly analytics. Deterministic speech parsing and progression recommendation generation are future scope.
 - Analytics (implemented subset): weekly medians, sparse-data warnings, exercise trends and 28-day weight comparison. Energy estimates and progression recommendations are future scope.
 - Mobile persistence (implemented): SQLite records, migrations, audit, local outbox and backup/restore. Secure storage, voice capture and remote sync adapters are future scope.
+- Workout-sheet viewer (implemented): user-selected XLSX files are parsed locally, normalized, and stored as a versioned SQLite record; no workbook content is sent to a server.
 - Speech.Contracts: normalized transcription envelope and provider interface.
 - Cloud.SpeechProxy: authenticated Azure Function; checks consent token, size, quotas and provider credentials; returns transcript with metadata.
 - Infrastructure.Server (optional): sync API, idempotent event ledger and encrypted backup. Not required for MVP launch.

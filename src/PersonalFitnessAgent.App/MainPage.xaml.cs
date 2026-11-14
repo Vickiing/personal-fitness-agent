@@ -17,6 +17,7 @@ public sealed class MainPage : ContentPage
             TextColor = Color.FromArgb("#64716E")
         }, Ui.Section("Visão da semana"), _summary,
             Ui.Section("Atalhos"),
+            Ui.Button("Visualizar minha ficha A/B", async (_, _) => await Shell.Current.GoToAsync(nameof(TrainingSheetPage))),
             Ui.Button("Registrar treino", async (_, _) => await Shell.Current.GoToAsync("//workout")),
             Ui.Button("Fazer check-in", async (_, _) => await Shell.Current.GoToAsync("//checkin"), true),
             Ui.Button("Ver restrições", async (_, _) => await Shell.Current.GoToAsync("//restrictions"), true));

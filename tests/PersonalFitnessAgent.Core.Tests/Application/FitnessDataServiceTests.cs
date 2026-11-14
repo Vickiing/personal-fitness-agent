@@ -175,6 +175,57 @@ public sealed class FitnessDataServiceTests
     }
 
     [Fact]
+    public void StartingSavedPlanRechecksRestrictionsAddedAfterPlanCreation()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"pfa-{Guid.NewGuid():N}.db");
+        try
+        {
+            using var store = new SqliteLocalStore(path);
+            var service = new FitnessDataService(store);
+            var exercise = service.SaveExercise("synthetic press", "press", "bar", usesExternalLoad: true);
+            var plan = service.SavePlan("synthetic plan", [exercise.Id]);
+            service.AddRestriction("new load restriction", null, null, null, true, null,
+                RestrictionAction.Block, RestrictionSource.UserReport, "synthetic policy");
+
+            Assert.Throws<InvalidOperationException>(() => service.StartSession(plan));
+            Assert.Empty(service.Sessions);
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            if (File.Exists(path)) File.Delete(path);
+            if (File.Exists(path + "-shm")) File.Delete(path + "-shm");
+            if (File.Exists(path + "-wal")) File.Delete(path + "-wal");
+        }
+    }
+
+    [Fact]
+    public void StartingPlanWithWarningRequiresExplicitAcknowledgment()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"pfa-{Guid.NewGuid():N}.db");
+        try
+        {
+            using var store = new SqliteLocalStore(path);
+            var service = new FitnessDataService(store);
+            var exercise = service.SaveExercise("synthetic press", "press", "bar", usesExternalLoad: true);
+            var plan = service.SavePlan("synthetic plan", [exercise.Id]);
+            service.AddRestriction("press warning", "press", null, null, null, null,
+                RestrictionAction.Warn, RestrictionSource.UserReport, "synthetic policy");
+
+            Assert.Throws<InvalidOperationException>(() => service.StartSession(plan));
+            var session = service.StartSession(plan, warningsAcknowledged: true);
+            Assert.Equal(plan.Id, session.PlanId);
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            if (File.Exists(path)) File.Delete(path);
+            if (File.Exists(path + "-shm")) File.Delete(path + "-shm");
+            if (File.Exists(path + "-wal")) File.Delete(path + "-wal");
+        }
+    }
+
+    [Fact]
     public void OlderExerciseContractsKeepNewRestrictionMetadataUnknown()
     {
         var path = Path.Combine(Path.GetTempPath(), $"pfa-{Guid.NewGuid():N}.db");

@@ -132,7 +132,16 @@ public sealed class WorkoutPage : ContentPage
         if (_planPicker.SelectedItem is not PlanDto plan) { _status.Text = "Selecione um plano."; return; }
         try
         {
-            _session = App.Data.StartSession(plan);
+            var warnings = App.Data.EvaluatePlan(plan)
+                .Where(result => result.Evaluation.Decision == RestrictionDecision.Warn).ToArray();
+            if (warnings.Length > 0)
+            {
+                var accepted = await DisplayAlertAsync("Política de aviso",
+                    string.Join("\n", warnings.Select(item => $"{item.Exercise.Name}: {string.Join("; ", item.Evaluation.Reasons)}")),
+                    "Continuar", "Cancelar");
+                if (!accepted) return;
+            }
+            _session = App.Data.StartSession(plan, warningsAcknowledged: warnings.Length > 0);
             _status.Text = $"Treino iniciado: {plan.Label} v{plan.Version}.";
             ToggleSessionControls();
         }

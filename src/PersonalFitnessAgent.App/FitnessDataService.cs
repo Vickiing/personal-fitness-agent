@@ -115,8 +115,26 @@ public sealed class FitnessDataService
         return results;
     }
 
-    public SessionDto StartSession(PlanDto plan)
+    public IReadOnlyList<(ExerciseSnapshotDto Exercise, RestrictionEvaluation Evaluation)> EvaluatePlan(PlanDto plan)
     {
+        ArgumentNullException.ThrowIfNull(plan);
+        return plan.Exercises.Select(exercise => (exercise, EvaluateRestriction(exercise))).ToArray();
+    }
+
+    public SessionDto StartSession(PlanDto plan, bool warningsAcknowledged = false)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        var evaluations = EvaluatePlan(plan);
+        var unsafeExercises = evaluations.Where(item => item.Evaluation.Decision is
+            RestrictionDecision.Block or RestrictionDecision.RequiresReview).ToArray();
+        if (unsafeExercises.Length > 0)
+            throw new InvalidOperationException(string.Join("\n", unsafeExercises.Select(item =>
+                $"{item.Exercise.Name}: política exige revisão antes de iniciar o treino.")));
+        var warnings = evaluations.Where(item => item.Evaluation.Decision == RestrictionDecision.Warn).ToArray();
+        if (warnings.Length > 0 && !warningsAcknowledged)
+            throw new InvalidOperationException(string.Join("\n", warnings.Select(item =>
+                $"{item.Exercise.Name}: confirme o aviso da política antes de iniciar o treino.")));
+
         var dto = new SessionDto(Guid.NewGuid(), plan.Id, plan.Version, DateTimeOffset.UtcNow,
             (int)TimeZoneInfo.Local.GetUtcOffset(DateTimeOffset.Now).TotalMinutes, null, null, null, plan.Exercises, []);
         Save("session", dto.Id, dto, auditAction: "session.started", auditDetail: plan.Label);
@@ -485,4 +503,9 @@ public sealed class FitnessDataService
         (RestrictionAction)policy.Action, (RestrictionSource)policy.Source, policy.Reason, (RestrictionStatus)policy.Status,
         policy.Region, policy.MovementPattern, policy.Equipment, policy.ExternalLoad, policy.Position,
         policy.RangeOfMotion, policy.Version, policy.ReviewOn);
+
+    private RestrictionEvaluation EvaluateRestriction(ExerciseSnapshotDto exercise) => RestrictionEngine.Evaluate(
+        new ExerciseContext(exercise.Id, exercise.Name, MetadataSet(exercise.MovementPatterns), MetadataSet(exercise.Equipment),
+            exercise.UsesExternalLoad, exercise.Position, exercise.RangeOfMotion, exercise.Region),
+        Restrictions.Select(ToDomain), DateTimeOffset.UtcNow);
 }

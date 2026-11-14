@@ -17,6 +17,7 @@ RestrictionPolicy {
 1. Resolve exercise metadata to movement patterns, load direction, positions and equipment tags.
 2. Evaluate all active predicates; most restrictive action wins. Unknown metadata or conflict => review required (fail closed).
    A pending-review policy requires review only when its scope matches the exercise or missing metadata prevents ruling out a match.
+   Re-evaluate the saved exercise snapshots against current policies when starting a session; block and review decisions stop the start, while warnings require explicit acknowledgment.
 3. Consider current symptoms and post-exercise symptom history; delay-based reactions need retrospective linkage.
 4. Apply contraindication checks to the **proposed** change, not just the current exercise.
 5. Record decision trace: policy IDs, version, input event IDs, conflicts and timestamp.

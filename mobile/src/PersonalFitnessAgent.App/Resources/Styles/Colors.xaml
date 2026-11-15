@@ -5,16 +5,16 @@
 
     <!-- Note: For Android please see also Platforms\Android\Resources\values\colors.xml -->
 
-    <Color x:Key="Primary">#153D34</Color>
-    <Color x:Key="PrimaryDark">#0B2420</Color>
-    <Color x:Key="PrimaryDarkText">#14221F</Color>
-    <Color x:Key="Secondary">#E8F1E8</Color>
-    <Color x:Key="SecondaryDarkText">#153D34</Color>
-    <Color x:Key="Tertiary">#C8F078</Color>
+    <Color x:Key="Primary">#18212B</Color>
+    <Color x:Key="PrimaryDark">#0B0F14</Color>
+    <Color x:Key="PrimaryDarkText">#F3F6FA</Color>
+    <Color x:Key="Secondary">#1A2631</Color>
+    <Color x:Key="SecondaryDarkText">#F3F6FA</Color>
+    <Color x:Key="Tertiary">#FF642D</Color>
 
     <Color x:Key="White">White</Color>
     <Color x:Key="Black">Black</Color>
-    <Color x:Key="Magenta">#C8F078</Color>
+    <Color x:Key="Magenta">#FF642D</Color>
     <Color x:Key="MidnightBlue">#190649</Color>
     <Color x:Key="OffBlack">#1f1f1f</Color>
 

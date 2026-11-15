@@ -11,38 +11,35 @@ public sealed class TrainingSheetPage : ContentPage
     private readonly Label _daySummary = new();
     private readonly Button _dayA = new();
     private readonly Button _dayB = new();
+    private readonly Button _toggleNotes = new();
+    private readonly VerticalStackLayout _notesPanel = new() { Spacing = 6, IsVisible = false };
     private readonly CollectionView _exercises;
+    private readonly Button _startSession = new()
+    {
+        Text = "Iniciar treino",
+        FontSize = 14,
+        FontAttributes = FontAttributes.Bold,
+        TextColor = Color.FromArgb("#F3F6FA"),
+        BackgroundColor = Color.FromArgb("#FF642D"),
+        CornerRadius = 16,
+        HeightRequest = 50
+    };
     private WorkoutSheet? _sheet;
     private WorkoutSheetDay? _selectedDay;
 
     public TrainingSheetPage()
     {
         Title = "Treinos";
-        BackgroundColor = Color.FromArgb("#F4F6F2");
+        BackgroundColor = Color.FromArgb("#0B0F14");
 
-        var eyebrow = new Label
-        {
-            Text = "SUA BIBLIOTECA",
-            FontSize = 10,
-            FontAttributes = FontAttributes.Bold,
-            TextColor = Color.FromArgb("#6F8178"),
-            CharacterSpacing = 1.7
-        };
         var title = new Label
         {
-            Text = "Meus treinos",
-            FontSize = 28,
+            Text = "Meu treino",
+            FontSize = 24,
             FontAttributes = FontAttributes.Bold,
-            TextColor = Color.FromArgb("#14221F")
+            TextColor = Color.FromArgb("#F3F6FA")
         };
         SemanticProperties.SetHeadingLevel(title, SemanticHeadingLevel.Level1);
-        var subtitle = new Label
-        {
-            Text = "Abra um movimento para assistir à demonstração e ver a ficha.",
-            FontSize = 14,
-            TextColor = Color.FromArgb("#71807B"),
-            LineBreakMode = LineBreakMode.WordWrap
-        };
 
         StyleDayButton(_dayA, "TREINO A");
         StyleDayButton(_dayB, "TREINO B");
@@ -58,16 +55,29 @@ public sealed class TrainingSheetPage : ContentPage
 
         _dayTitle.FontSize = 18;
         _dayTitle.FontAttributes = FontAttributes.Bold;
-        _dayTitle.TextColor = Color.FromArgb("#14221F");
+        _dayTitle.TextColor = Color.FromArgb("#F3F6FA");
         _daySummary.FontSize = 13;
-        _daySummary.TextColor = Color.FromArgb("#71807B");
+        _daySummary.TextColor = Color.FromArgb("#A7B2BF");
         _daySummary.LineBreakMode = LineBreakMode.WordWrap;
+        _toggleNotes.FontSize = 12;
+        _toggleNotes.TextColor = Color.FromArgb("#CFD8E2");
+        _toggleNotes.BackgroundColor = Colors.Transparent;
+        _toggleNotes.HorizontalOptions = LayoutOptions.Start;
+        _toggleNotes.HeightRequest = 36;
+        _toggleNotes.Padding = new Thickness(0);
         var dayInfo = new VerticalStackLayout { Spacing = 3, Children = { _dayTitle, _daySummary } };
+        _startSession.Clicked += async (_, _) =>
+        {
+            if (_sheet is null || _selectedDay is null) return;
+            var page = new WorkoutSessionPage(_sheet, _selectedDay);
+            if (await page.StartAsync())
+                await Shell.Current.Navigation.PushAsync(page);
+        };
         var header = new VerticalStackLayout
         {
-            Padding = new Thickness(20, 20, 20, 10),
-            Spacing = 10,
-            Children = { eyebrow, title, subtitle, dayTabs, dayInfo }
+            Padding = new Thickness(18, 12, 18, 8),
+            Spacing = 7,
+            Children = { title, dayTabs, dayInfo, _startSession }
         };
 
         _exercises = new CollectionView
@@ -106,16 +116,16 @@ public sealed class TrainingSheetPage : ContentPage
             VerticalOptions = LayoutOptions.Center,
             Children =
             {
-                new Label { Text = "A / B", FontSize = 25, FontAttributes = FontAttributes.Bold, TextColor = Color.FromArgb("#1A5948"), HorizontalTextAlignment = TextAlignment.Center },
-                new Label { Text = "Sua ficha aparecerá aqui", FontSize = 19, FontAttributes = FontAttributes.Bold, TextColor = Color.FromArgb("#14221F"), HorizontalTextAlignment = TextAlignment.Center },
-                new Label { Text = "Quando um treino for disponibilizado na plataforma web, ele ficará salvo neste aparelho para consulta offline. Não é preciso importar planilha.", FontSize = 14, TextColor = Color.FromArgb("#71807B"), HorizontalTextAlignment = TextAlignment.Center, HorizontalOptions = LayoutOptions.Center, MaximumWidthRequest = 330, LineBreakMode = LineBreakMode.WordWrap }
+                new Label { Text = "A / B", FontSize = 25, FontAttributes = FontAttributes.Bold, TextColor = Color.FromArgb("#FF642D"), HorizontalTextAlignment = TextAlignment.Center },
+                new Label { Text = "Sua ficha aparecerá aqui", FontSize = 19, FontAttributes = FontAttributes.Bold, TextColor = Color.FromArgb("#F3F6FA"), HorizontalTextAlignment = TextAlignment.Center },
+                new Label { Text = "Quando um treino for disponibilizado na plataforma web, ele ficará salvo neste aparelho para consulta offline. Não é preciso importar planilha.", FontSize = 14, TextColor = Color.FromArgb("#A7B2BF"), HorizontalTextAlignment = TextAlignment.Center, HorizontalOptions = LayoutOptions.Center, MaximumWidthRequest = 330, LineBreakMode = LineBreakMode.WordWrap }
             }
         };
         return new Border
         {
-            Stroke = Color.FromArgb("#E1E8E1"),
+            Stroke = Color.FromArgb("#293440"),
             StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 24 },
-            BackgroundColor = Colors.White,
+            BackgroundColor = Color.FromArgb("#151C24"),
             Padding = new Thickness(24),
             Margin = new Thickness(20, 8, 20, 20),
             Content = content
@@ -124,24 +134,21 @@ public sealed class TrainingSheetPage : ContentPage
 
     private View CreateExerciseCard()
     {
-        var poster = new GraphicsView
+        var poster = new Border
         {
-            Drawable = new ExercisePosterDrawable(ExerciseMotion.SupportedRow),
             WidthRequest = 66,
             HeightRequest = 74,
-            BackgroundColor = Color.FromArgb("#E8F1E8"),
-            VerticalOptions = LayoutOptions.Center
-        };
-        poster.BindingContextChanged += (_, _) =>
-        {
-            if (poster.BindingContext is WorkoutSheetExercise exercise)
-                poster.Drawable = new ExercisePosterDrawable(ExerciseGuideCatalog.For(exercise.Name).Motion);
+            StrokeThickness = 0,
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 16 },
+            BackgroundColor = Color.FromArgb("#18212B"),
+            VerticalOptions = LayoutOptions.Center,
+            Content = new Label { Text = "SEM\nVÍDEO", FontSize = 10, FontAttributes = FontAttributes.Bold, TextColor = Color.FromArgb("#FF642D"), HorizontalTextAlignment = TextAlignment.Center, VerticalTextAlignment = TextAlignment.Center }
         };
         var order = new Label
         {
             FontSize = 10,
             FontAttributes = FontAttributes.Bold,
-            TextColor = Color.FromArgb("#71807B"),
+            TextColor = Color.FromArgb("#A7B2BF"),
             CharacterSpacing = 1.1
         };
         order.SetBinding(Label.TextProperty, new Binding(nameof(WorkoutSheetExercise.Order), stringFormat: "MOVIMENTO {0:00}"));
@@ -149,15 +156,15 @@ public sealed class TrainingSheetPage : ContentPage
         {
             FontSize = 16,
             FontAttributes = FontAttributes.Bold,
-            TextColor = Color.FromArgb("#14221F"),
+            TextColor = Color.FromArgb("#F3F6FA"),
             LineBreakMode = LineBreakMode.WordWrap,
             MaxLines = 2
         };
         name.SetBinding(Label.TextProperty, nameof(WorkoutSheetExercise.Name));
-        var prescription = new Label { FontSize = 12, TextColor = Color.FromArgb("#63736D"), LineBreakMode = LineBreakMode.WordWrap };
+        var prescription = new Label { FontSize = 12, TextColor = Color.FromArgb("#A7B2BF"), LineBreakMode = LineBreakMode.WordWrap };
         prescription.SetBinding(Label.TextProperty, new Binding(".", converter: new ExerciseCardSummaryConverter()));
         var text = new VerticalStackLayout { Spacing = 4, VerticalOptions = LayoutOptions.Center, Children = { order, name, prescription } };
-        var arrow = new Label { Text = "›", FontSize = 30, TextColor = Color.FromArgb("#8A9A91"), VerticalTextAlignment = TextAlignment.Center, HorizontalTextAlignment = TextAlignment.Center };
+        var arrow = new Label { Text = "›", FontSize = 30, TextColor = Color.FromArgb("#8997A6"), VerticalTextAlignment = TextAlignment.Center, HorizontalTextAlignment = TextAlignment.Center };
         var layout = new Grid
         {
             ColumnDefinitions = { new ColumnDefinition(GridLength.Auto), new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto) },
@@ -168,9 +175,9 @@ public sealed class TrainingSheetPage : ContentPage
         layout.SetColumn(arrow, 2);
         var card = new Border
         {
-            Stroke = Color.FromArgb("#E4E9E3"),
+            Stroke = Color.FromArgb("#293440"),
             StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 20 },
-            BackgroundColor = Colors.White,
+            BackgroundColor = Color.FromArgb("#151C24"),
             Padding = new Thickness(12),
             Margin = new Thickness(20, 0, 20, 0),
             Content = layout
@@ -179,8 +186,18 @@ public sealed class TrainingSheetPage : ContentPage
         {
             Command = new Command(async () =>
             {
-                if (card.BindingContext is WorkoutSheetExercise exercise)
-                    await Shell.Current.Navigation.PushAsync(new ExerciseDetailPage(_selectedDay?.Key ?? "", exercise));
+                if (card.BindingContext is WorkoutSheetExercise exercise && _selectedDay is { } day && _sheet is { } sheet)
+                {
+                    var initialIndex = Math.Max(0, day.Exercises.ToList().FindIndex(item => item.Order == exercise.Order));
+                    var plan = WorkoutSessionPage.CreatePlanFor(sheet, day, App.Data.Exercises);
+                    var exerciseId = plan.Exercises[initialIndex].Id;
+                    await Shell.Current.Navigation.PushAsync(new ExerciseDetailPage(day.Key, exercise, async () =>
+                    {
+                        var sessionPage = new WorkoutSessionPage(sheet, day, initialIndex);
+                        if (await sessionPage.StartAsync())
+                            await Shell.Current.Navigation.PushAsync(sessionPage);
+                    }, exerciseId, App.Data.Sessions));
+                }
             })
         });
         SemanticProperties.SetDescription(card, "Toque para abrir os detalhes e a demonstração do exercício.");
@@ -196,6 +213,7 @@ public sealed class TrainingSheetPage : ContentPage
             _exercises.ItemsSource = null;
             _dayTitle.Text = "Aguardando sua ficha";
             _daySummary.Text = "A ficha aparecerá após ser disponibilizada pela plataforma web.";
+            _startSession.IsEnabled = false;
             UpdateDayButtons();
             return;
         }
@@ -219,30 +237,45 @@ public sealed class TrainingSheetPage : ContentPage
             _exercises.ItemsSource = null;
             return;
         }
-        _dayTitle.Text = _selectedDay.Title;
-        _daySummary.Text = string.IsNullOrWhiteSpace(_selectedDay.Summary)
-            ? $"{_selectedDay.Exercises.Count} movimentos"
-            : _selectedDay.Summary;
-        var notes = _selectedDay.Notes.Select(note => new Label
+        _dayTitle.Text = $"Treino {_selectedDay.Key}";
+        var plan = WorkoutSessionPage.CreatePlanFor(_sheet!, _selectedDay, App.Data.Exercises);
+        var hasPendingSession = App.Data.Sessions.Any(session => session.PlanId == plan.Id && session.CompletedUtc is null);
+        _startSession.Text = hasPendingSession ? "Retomar treino" : "Iniciar treino";
+        _startSession.IsEnabled = true;
+        _daySummary.Text = $"{_selectedDay.Exercises.Count} exercícios";
+        _notesPanel.Children.Clear();
+        foreach (var note in _selectedDay.Notes)
         {
-            Text = note,
-            FontSize = 12,
-            TextColor = Color.FromArgb("#43564E"),
-            BackgroundColor = Color.FromArgb("#E8F0E7"),
-            Padding = new Thickness(12, 8),
-            LineBreakMode = LineBreakMode.WordWrap
-        }).ToArray();
-        if (notes.Length == 0)
-        {
-            _exercises.Header = null;
+            _notesPanel.Children.Add(new Label
+            {
+                Text = note,
+                FontSize = 12,
+                TextColor = Color.FromArgb("#CFD8E2"),
+                BackgroundColor = Color.FromArgb("#1B2732"),
+                Padding = new Thickness(12, 8),
+                LineBreakMode = LineBreakMode.WordWrap
+            });
         }
-        else
+        _toggleNotes.Text = _selectedDay.Notes.Count == 0 ? string.Empty : $"Orientações ({_selectedDay.Notes.Count})  ⌄";
+        _toggleNotes.IsVisible = _selectedDay.Notes.Count > 0;
+        _toggleNotes.Clicked -= ToggleNotes;
+        _toggleNotes.Clicked += ToggleNotes;
+        var noteHeader = new VerticalStackLayout
         {
-            var noteHeader = new VerticalStackLayout { Padding = new Thickness(20, 0, 20, 8), Spacing = 6 };
-            foreach (var note in notes) noteHeader.Children.Add(note);
-            _exercises.Header = noteHeader;
-        }
+            Padding = new Thickness(20, 0, 20, 8),
+            Spacing = 6,
+            Children = { _toggleNotes, _notesPanel }
+        };
+        _exercises.Header = noteHeader;
         _exercises.ItemsSource = _selectedDay.Exercises;
+    }
+
+    private void ToggleNotes(object? sender, EventArgs e)
+    {
+        _notesPanel.IsVisible = !_notesPanel.IsVisible;
+        _toggleNotes.Text = _notesPanel.IsVisible
+            ? $"Orientações ({_notesPanel.Children.Count})  ⌃"
+            : $"Orientações ({_notesPanel.Children.Count})  ⌄";
     }
 
     private void UpdateDayButtons()
@@ -268,8 +301,8 @@ public sealed class TrainingSheetPage : ContentPage
 
     private static void SetDayStyle(Button button, bool selected)
     {
-        button.BackgroundColor = Color.FromArgb(selected ? "#153D34" : "#E8EDE7");
-        button.TextColor = selected ? Colors.White : Color.FromArgb("#42574E");
+        button.BackgroundColor = Color.FromArgb(selected ? "#18212B" : "#1B2732");
+        button.TextColor = selected ? Colors.White : Color.FromArgb("#CFD8E2");
     }
 }
 
@@ -300,9 +333,9 @@ internal sealed class ExercisePosterDrawable(ExerciseMotion motion) : IDrawable
         float X(float value) => center + value * scale;
         float Y(float value) => 3 + value * scale;
         canvas.SaveState();
-        canvas.FillColor = Color.FromArgb("#E8F1E8");
+        canvas.FillColor = Color.FromArgb("#1A2631");
         canvas.FillRoundedRectangle(dirtyRect, 16);
-        canvas.StrokeColor = Color.FromArgb("#7E9A87");
+        canvas.StrokeColor = Color.FromArgb("#8997A6");
         canvas.StrokeLineCap = LineCap.Round;
         canvas.StrokeSize = 3 * scale;
         switch (motion)
@@ -350,9 +383,9 @@ internal sealed class ExercisePosterDrawable(ExerciseMotion motion) : IDrawable
             _ => (-17f, 30f, -20f, 37f, 17f, 30f, 20f, 37f)
         };
 
-        canvas.FillColor = Color.FromArgb("#C8F078");
+        canvas.FillColor = Color.FromArgb("#FF642D");
         canvas.FillCircle(X(0), Y(12), 5.5f * scale);
-        canvas.StrokeColor = Color.FromArgb("#183F34");
+        canvas.StrokeColor = Color.FromArgb("#18212B");
         canvas.StrokeSize = 5 * scale;
         canvas.DrawLine(X(0), Y(18), X(0), Y(hipY));
         canvas.DrawLine(X(0), Y(shoulderY), X(leftElbowX), Y(leftElbowY));
@@ -397,7 +430,7 @@ internal sealed class ExercisePosterDrawable(ExerciseMotion motion) : IDrawable
             canvas.DrawLine(X(10), Y(58), X(15), Y(68));
         }
 
-        canvas.StrokeColor = Color.FromArgb("#91A697");
+        canvas.StrokeColor = Color.FromArgb("#8997A6");
         canvas.StrokeSize = 2 * scale;
         canvas.DrawLine(X(-32), Y(71), X(32), Y(71));
         canvas.RestoreState();

@@ -8,7 +8,7 @@ public sealed class CheckInPage : ContentPage
     private readonly Entry _sleep = Ui.Input("Sono em horas (opcional)", Keyboard.Numeric);
     private readonly Entry _weight = Ui.Input("Peso em kg (opcional)", Keyboard.Numeric);
     private readonly Entry _waist = Ui.Input("Cintura em cm (opcional)", Keyboard.Numeric);
-    private readonly DatePicker _recordDate = new() { Date = DateTime.Today, MaximumDate = DateTime.Today };
+    private readonly DatePicker _recordDate = new() { Date = DateTime.Today, Format = "dd/MM/yyyy", MaximumDate = DateTime.Today };
     private readonly Picker _activity = new() { Title = "Nível de atividade (opcional)" };
     private readonly Picker _measurementSource = new() { Title = "Origem das medidas" };
     private readonly Entry _food = Ui.Input("Alimentação (texto; sem calorias estimadas)");
@@ -18,7 +18,7 @@ public sealed class CheckInPage : ContentPage
     private readonly Entry _region = Ui.Input("Região relacionada (opcional)");
     private readonly Entry _severity = Ui.Input("Intensidade de 1 a 10 (opcional)", Keyboard.Numeric);
     private readonly Entry _patterns = Ui.Input("Padrões de movimento relacionados, separados por vírgula");
-    private readonly DatePicker _symptomOnset = new() { MaximumDate = DateTime.Today };
+    private readonly DatePicker _symptomOnset = new() { Format = "dd/MM/yyyy", MaximumDate = DateTime.Today };
     private readonly Picker _relatedSession = new() { Title = "Sessão relacionada (opcional)" };
     private readonly Label _status = Ui.Body("");
     private readonly VerticalStackLayout _foodEntries = new() { Spacing = 6 };
@@ -47,7 +47,7 @@ public sealed class CheckInPage : ContentPage
         }
         _relatedSession.ItemsSource = App.Data.Sessions.OrderByDescending(session => session.StartedUtc).Take(30).ToArray();
         _relatedSession.ItemDisplayBinding = new Binding(nameof(SessionDto.StartedAtLocal), stringFormat: "{0:dd/MM HH:mm}");
-        Content = Ui.Scroll("Check-in diário",
+        var form = Ui.Form("Check-in diário",
             Ui.Body("Deixe em branco o que você não sabe. Registro manual disponível sem conexão."),
             Ui.Section("Data do registro"), _recordDate, _sleep, _activity, _weight, _waist, _measurementSource,
             Ui.Button("Atualizar medidas registradas (campos vazios ficam desconhecidos)", (_, _) => UpdateMeasurements(), true),
@@ -57,7 +57,31 @@ public sealed class CheckInPage : ContentPage
             Ui.Section("Alimentos desta data"), _foodEntries,
             Ui.Section("Sintoma"), Ui.Body("Você pode registrar o sintoma depois do treino e vincular à sessão anterior."),
             _symptom, _region, _severity, _patterns, _symptomOnset, _relatedSession,
-            Ui.Button("Salvar check-in", (_, _) => Save()), Ui.Section("Sintomas desta data"), _symptomEntries, _status);
+            Ui.Section("Sintomas desta data"), _symptomEntries);
+        var saveButton = Ui.Button("Salvar check-in", (_, _) => Save());
+        var saveFooter = new Border
+        {
+            BackgroundColor = Color.FromArgb("#0B0F14"),
+            StrokeThickness = 0,
+            Padding = new Thickness(20, 8, 20, 12),
+            Content = new VerticalStackLayout
+            {
+                Spacing = 6,
+                Children = { _status, saveButton }
+            }
+        };
+        var page = new Grid
+        {
+            RowDefinitions = { new RowDefinition(GridLength.Star), new RowDefinition(GridLength.Auto) },
+            BackgroundColor = Color.FromArgb("#0B0F14"),
+            Children =
+            {
+                new ScrollView { Content = form, BackgroundColor = Color.FromArgb("#0B0F14") },
+                saveFooter
+            }
+        };
+        Grid.SetRow(saveFooter, 1);
+        Content = page;
         RefreshEntries();
     }
 

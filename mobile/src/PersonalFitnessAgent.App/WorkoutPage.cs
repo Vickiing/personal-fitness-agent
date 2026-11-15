@@ -47,7 +47,7 @@ public sealed class WorkoutPage : ContentPage
             Ui.Section("Registrar sessão"), _planPicker,
             Ui.Button("Iniciar treino", (_, _) => Start(), true),
             _load, _reps, _rir, _setNotes, addSet, _duration, complete, _status);
-        Content = new ScrollView { Content = content, BackgroundColor = Color.FromArgb("#F5F4EF") };
+        Content = new ScrollView { Content = content, BackgroundColor = Color.FromArgb("#0B0F14") };
         RefreshChoices();
     }
 

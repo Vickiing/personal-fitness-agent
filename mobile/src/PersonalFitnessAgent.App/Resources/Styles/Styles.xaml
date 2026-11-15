@@ -395,7 +395,7 @@
         <Setter Property="Shell.TabBarBackgroundColor" Value="{StaticResource PrimaryDark}" />
         <Setter Property="Shell.TabBarForegroundColor" Value="{StaticResource Tertiary}" />
         <Setter Property="Shell.TabBarTitleColor" Value="{StaticResource Tertiary}" />
-        <Setter Property="Shell.TabBarUnselectedColor" Value="#A9BBB6" />
+        <Setter Property="Shell.TabBarUnselectedColor" Value="#8997A6" />
     </Style>
 
     <Style TargetType="NavigationPage">

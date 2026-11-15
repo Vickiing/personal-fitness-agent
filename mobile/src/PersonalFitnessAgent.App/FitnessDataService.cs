@@ -18,6 +18,9 @@ public sealed record SessionDto(Guid Id, Guid PlanId, int PlanVersion, DateTimeO
 {
     [JsonIgnore]
     public DateTimeOffset StartedAtLocal => StartedUtc.ToOffset(TimeSpan.FromMinutes(OffsetMinutes));
+    public int ActiveExerciseIndex { get; init; }
+    public DateTimeOffset? PausedUtc { get; init; }
+    public long TotalPausedSeconds { get; init; }
 }
 public sealed record FoodDto(Guid Id, string Name, string Description, bool Quantified, decimal? Amount, string? Unit,
     decimal? EnergyKcal, string? CatalogCode, string? CompositionSource, int? CompositionSourceVersion,
@@ -34,7 +37,7 @@ public sealed record WorkoutScheduleDto(Guid Id, int Version, DayOfWeek[] Planne
 
 public sealed class FitnessDataService
 {
-    private const int ContractVersion = 5;
+    private const int ContractVersion = 6;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private readonly SqliteLocalStore _store;
 
@@ -147,9 +150,76 @@ public sealed class FitnessDataService
     {
         var stored = Find<SessionDto>("session", sessionId) ?? throw new KeyNotFoundException("Treino não encontrado.");
         var exercise = stored.Value.PlanSnapshot.FirstOrDefault(item => item.Id == exerciseId) ?? throw new InvalidOperationException("O exercício não pertence à versão do plano iniciada.");
+        if (stored.Value.CompletedUtc is not null) throw new InvalidOperationException("Treino já concluído.");
+        if (stored.Value.PausedUtc is not null) throw new InvalidOperationException("Retome o treino antes de registrar uma série.");
+        ValidateSetValues(loadKg, reps, rir);
         var next = stored.Value with { Sets = [.. stored.Value.Sets, new SetDto(Guid.NewGuid(), exerciseId, exercise.Version,
-            stored.Value.Sets.Count(s => s.ExerciseId == exerciseId) + 1, loadKg, reps, rir, notes)] };
+            stored.Value.Sets.Count(s => s.ExerciseId == exerciseId) + 1, loadKg, reps, rir, EmptyToNull(notes))] };
         Save("session", sessionId, next, stored.Revision, "session.set_recorded", exercise.Name);
+        return next;
+    }
+
+    public SessionDto UpdateSessionProgress(Guid sessionId, int activeExerciseIndex)
+    {
+        var stored = Find<SessionDto>("session", sessionId) ?? throw new KeyNotFoundException("Treino não encontrado.");
+        if (stored.Value.CompletedUtc is not null) throw new InvalidOperationException("Treino já concluído.");
+        if (activeExerciseIndex < 0 || activeExerciseIndex >= stored.Value.PlanSnapshot.Length)
+            throw new ArgumentOutOfRangeException(nameof(activeExerciseIndex));
+        var next = stored.Value with { ActiveExerciseIndex = activeExerciseIndex };
+        Save("session", sessionId, next, stored.Revision, "session.exercise_changed",
+            next.PlanSnapshot[activeExerciseIndex].Name);
+        return next;
+    }
+
+    public SessionDto PauseSession(Guid sessionId)
+    {
+        var stored = Find<SessionDto>("session", sessionId) ?? throw new KeyNotFoundException("Treino não encontrado.");
+        if (stored.Value.CompletedUtc is not null) throw new InvalidOperationException("Treino já concluído.");
+        if (stored.Value.PausedUtc is not null) return stored.Value;
+        var next = stored.Value with { PausedUtc = DateTimeOffset.UtcNow };
+        Save("session", sessionId, next, stored.Revision, "session.paused", "paused");
+        return next;
+    }
+
+    public SessionDto ResumeSession(Guid sessionId)
+    {
+        var stored = Find<SessionDto>("session", sessionId) ?? throw new KeyNotFoundException("Treino não encontrado.");
+        if (stored.Value.CompletedUtc is not null) throw new InvalidOperationException("Treino já concluído.");
+        if (stored.Value.PausedUtc is null) return stored.Value;
+        var pausedSeconds = Math.Max(0, (long)(DateTimeOffset.UtcNow - stored.Value.PausedUtc.Value).TotalSeconds);
+        var next = stored.Value with
+        {
+            PausedUtc = null,
+            TotalPausedSeconds = stored.Value.TotalPausedSeconds + pausedSeconds
+        };
+        Save("session", sessionId, next, stored.Revision, "session.resumed", "resumed");
+        return next;
+    }
+
+    public SessionDto UpdateSet(Guid sessionId, Guid setId, decimal? loadKg, int? reps, decimal? rir, string? notes)
+    {
+        ValidateSetValues(loadKg, reps, rir);
+        var stored = Find<SessionDto>("session", sessionId) ?? throw new KeyNotFoundException("Treino não encontrado.");
+        var target = stored.Value.Sets.FirstOrDefault(set => set.Id == setId)
+            ?? throw new KeyNotFoundException("Série não encontrada.");
+        var updated = target with { LoadKg = loadKg, Reps = reps, Rir = rir, Notes = EmptyToNull(notes) };
+        var next = stored.Value with { Sets = stored.Value.Sets.Select(set => set.Id == setId ? updated : set).ToArray() };
+        Save("session", sessionId, next, stored.Revision, "session.set_corrected", target.ExerciseId.ToString("D"));
+        return next;
+    }
+
+    public SessionDto DeleteSet(Guid sessionId, Guid setId)
+    {
+        var stored = Find<SessionDto>("session", sessionId) ?? throw new KeyNotFoundException("Treino não encontrado.");
+        var target = stored.Value.Sets.FirstOrDefault(set => set.Id == setId)
+            ?? throw new KeyNotFoundException("Série não encontrada.");
+        var remaining = stored.Value.Sets.Where(set => set.Id != setId).ToArray();
+        var exerciseSets = remaining.Where(set => set.ExerciseId == target.ExerciseId)
+            .OrderBy(set => set.Index).ToArray();
+        var indices = exerciseSets.Select((set, index) => (set.Id, Index: index + 1)).ToDictionary(item => item.Id, item => item.Index);
+        var normalized = remaining.Select(set => indices.TryGetValue(set.Id, out var index) ? set with { Index = index } : set).ToArray();
+        var next = stored.Value with { Sets = normalized };
+        Save("session", sessionId, next, stored.Revision, "session.set_removed", target.ExerciseId.ToString("D"));
         return next;
     }
 
@@ -157,8 +227,13 @@ public sealed class FitnessDataService
     {
         var stored = Find<SessionDto>("session", sessionId) ?? throw new KeyNotFoundException("Treino não encontrado.");
         if (stored.Value.CompletedUtc is not null) throw new InvalidOperationException("Treino já concluído.");
+        if (stored.Value.PausedUtc is not null) throw new InvalidOperationException("Retome o treino antes de concluí-lo.");
         if (durationMinutes < 0) throw new ArgumentOutOfRangeException(nameof(durationMinutes));
-        var next = stored.Value with { CompletedUtc = DateTimeOffset.UtcNow, DurationMinutes = durationMinutes, Notes = notes };
+        var pausedSeconds = stored.Value.PausedUtc is null
+            ? stored.Value.TotalPausedSeconds
+            : stored.Value.TotalPausedSeconds + Math.Max(0, (long)(DateTimeOffset.UtcNow - stored.Value.PausedUtc.Value).TotalSeconds);
+        var next = stored.Value with { CompletedUtc = DateTimeOffset.UtcNow, DurationMinutes = durationMinutes, Notes = notes,
+            PausedUtc = null, TotalPausedSeconds = pausedSeconds };
         Save("session", sessionId, next, stored.Revision, "session.completed", notes ?? "completed");
         return next;
     }
@@ -519,6 +594,14 @@ public sealed class FitnessDataService
     {
         var record = _store.ReadAll(kind).FirstOrDefault(item => item.Id == id);
         return record is null ? null : (record.Payload.Deserialize<T>(JsonOptions)!, record.Revision);
+    }
+
+    private static void ValidateSetValues(decimal? loadKg, int? reps, decimal? rir)
+    {
+        if (loadKg < 0) throw new ArgumentOutOfRangeException(nameof(loadKg));
+        if (reps < 0) throw new ArgumentOutOfRangeException(nameof(reps));
+        if (rir < 0) throw new ArgumentOutOfRangeException(nameof(rir));
+        if (loadKg is null && reps is null) throw new ArgumentException("Informe a carga ou as repetições.");
     }
 
     private static string[] Split(string? values) => (values ?? "").Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);

@@ -76,7 +76,7 @@ public sealed class RestrictionsPage : ContentPage
             };
             _items.Children.Add(new Border
             {
-                Stroke = Color.FromArgb("#DDE3DD"),
+                Stroke = Color.FromArgb("#293440"),
                 StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 12 },
                 Padding = 12,
                 Content = Ui.Body($"{policy.Label} · v{policy.Version}\n{action} · {source}\n{policy.Reason}\n" +

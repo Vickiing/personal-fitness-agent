@@ -6,15 +6,15 @@ namespace PersonalFitnessAgent.App;
 
 internal static class Ui
 {
-    private const string Ink = "#202A29";
-    private const string Muted = "#64716E";
-    private const string Accent = "#145A50";
+    private const string Ink = "#F3F6FA";
+    private const string Muted = "#A7B2BF";
+    private const string Accent = "#FF642D";
 
     public static Entry Input(string placeholder, Keyboard? keyboard = null) => new()
     {
         Placeholder = placeholder,
         Keyboard = keyboard ?? Keyboard.Default,
-        BackgroundColor = Colors.White,
+        BackgroundColor = Color.FromArgb("#151C24"),
         TextColor = Color.FromArgb(Ink),
         PlaceholderColor = Color.FromArgb(Muted),
         ClearButtonVisibility = ClearButtonVisibility.WhileEditing,
@@ -26,7 +26,7 @@ internal static class Ui
         var button = new Button
         {
             Text = text,
-            BackgroundColor = Color.FromArgb(secondary ? "#E5EFEB" : Accent),
+            BackgroundColor = Color.FromArgb(secondary ? "#202832" : Accent),
             TextColor = secondary ? Color.FromArgb(Accent) : Colors.White,
             CornerRadius = 14,
             FontAttributes = FontAttributes.Bold,
@@ -71,7 +71,7 @@ internal static class Ui
     public static ScrollView Scroll(string title, params View[] children) => new()
     {
         Content = Form(title, children),
-        BackgroundColor = Color.FromArgb("#F5F4EF")
+        BackgroundColor = Color.FromArgb("#0B0F14")
     };
 
     public static decimal? Decimal(string? value, string field)

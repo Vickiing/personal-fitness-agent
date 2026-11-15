@@ -3,19 +3,18 @@
        xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
        xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
        xmlns:local="clr-namespace:PersonalFitnessAgent.App"
-       Title="Fitness Agent"
+       Title="Pulso"
        Shell.ForegroundColor="#FFFFFF"
        Shell.TitleColor="#FFFFFF"
-       Shell.BackgroundColor="#0B2420"
-       Shell.TabBarBackgroundColor="#0B2420"
-       Shell.TabBarForegroundColor="#C8F078"
-       Shell.TabBarTitleColor="#C8F078"
-       Shell.TabBarUnselectedColor="#A9BBB6"
+       Shell.BackgroundColor="#0B0F14"
+       Shell.TabBarBackgroundColor="#0B0F14"
+       Shell.TabBarForegroundColor="#FF642D"
+       Shell.TabBarTitleColor="#FF642D"
+       Shell.TabBarUnselectedColor="#8997A6"
        Shell.NavBarHasShadow="False">
     <TabBar>
         <ShellContent Title="Hoje" Route="today" ContentTemplate="{DataTemplate local:MainPage}" />
         <ShellContent Title="Treinos" Route="workout" ContentTemplate="{DataTemplate local:TrainingSheetPage}" />
-        <ShellContent Title="Check-in" Route="checkin" ContentTemplate="{DataTemplate local:CheckInPage}" />
-        <ShellContent Title="Mais" Route="more" ContentTemplate="{DataTemplate local:MorePage}" />
+        <ShellContent Title="Minha conta" Route="account" ContentTemplate="{DataTemplate local:MorePage}" />
     </TabBar>
 </Shell>

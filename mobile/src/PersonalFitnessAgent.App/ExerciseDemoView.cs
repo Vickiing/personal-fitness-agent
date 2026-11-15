@@ -19,12 +19,22 @@ public sealed class ExerciseDemoView : ContentView
         _graphics = new GraphicsView
         {
             Drawable = _drawable,
-            HeightRequest = 260,
-            BackgroundColor = Color.FromArgb("#F1F5F1")
+            HeightRequest = 250,
+            BackgroundColor = Color.FromArgb("#102D27")
         };
         SemanticProperties.SetDescription(_graphics, guide.ImageDescription);
-        _play = Ui.Button("Reproduzir demonstração", (_, _) => Play(), secondary: true);
-        AutomationProperties.SetHelpText(_play, "Reproduz uma animação vetorial curta do movimento. O vídeo não começa automaticamente.");
+        _play = new Button
+        {
+            Text = "▶  Assistir ao movimento",
+            BackgroundColor = Color.FromArgb("#C8F078"),
+            TextColor = Color.FromArgb("#14221F"),
+            FontSize = 14,
+            FontAttributes = FontAttributes.Bold,
+            CornerRadius = 16,
+            HeightRequest = 48
+        };
+        _play.Clicked += (_, _) => TogglePlayback();
+        AutomationProperties.SetHelpText(_play, "Reproduz ou pausa uma animação ilustrativa local. Ela não começa automaticamente.");
         _timer = Dispatcher.CreateTimer();
         _timer.Interval = TimeSpan.FromMilliseconds(33);
         _timer.IsRepeating = true;
@@ -36,46 +46,45 @@ public sealed class ExerciseDemoView : ContentView
         };
         Content = new Border
         {
-            Stroke = Color.FromArgb("#E1E6E1"),
-            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 18 },
-            BackgroundColor = Colors.White,
-            Padding = 12,
+            Stroke = Color.FromArgb("#25483D"),
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 24 },
+            BackgroundColor = Color.FromArgb("#102D27"),
+            Padding = 14,
             Content = new VerticalStackLayout
             {
-                Spacing = 8,
+                Spacing = 10,
                 Children =
                 {
-                    Ui.Section("Imagem e demonstração"),
                     _graphics,
-                    Ui.Body("Ilustração vetorial local. Toque para reproduzir; não usa Internet e não inicia sozinha."),
+                    new Label { Text = "DEMONSTRAÇÃO ILUSTRATIVA  ·  DISPONÍVEL OFFLINE", FontSize = 10, FontAttributes = FontAttributes.Bold, TextColor = Color.FromArgb("#B9CDC1"), CharacterSpacing = 0.8 },
                     _play
                 }
             }
         };
     }
 
-    private void Play()
+    private void TogglePlayback()
     {
-        _progress = 0;
+        if (_playing)
+        {
+            _timer.Stop();
+            _playing = false;
+            _play.Text = "▶  Continuar demonstração";
+            return;
+        }
+
         _playing = true;
-        _play.Text = "Reproduzindo…";
-        _play.IsEnabled = false;
-        _drawable.Progress = _progress;
-        _graphics.Invalidate();
+        _play.Text = "Ⅱ  Pausar demonstração";
         _timer.Start();
     }
 
     private void Advance()
     {
         if (!_playing) return;
-        _progress = Math.Min(1f, _progress + 0.025f);
+        _progress += 0.025f;
+        if (_progress > 1f) _progress = 0f;
         _drawable.Progress = _progress;
         _graphics.Invalidate();
-        if (_progress < 1f) return;
-        _timer.Stop();
-        _playing = false;
-        _play.Text = "Repetir demonstração";
-        _play.IsEnabled = true;
     }
 
     private sealed class DemoDrawable(ExerciseMotion motion) : IDrawable
@@ -88,14 +97,14 @@ public sealed class ExerciseDemoView : ContentView
             var height = dirtyRect.Height;
             var center = width * 0.5f;
             canvas.SaveState();
-            canvas.FillColor = Color.FromArgb("#F1F5F1");
+            canvas.FillColor = Color.FromArgb("#102D27");
             canvas.FillRoundedRectangle(dirtyRect, 16);
-            canvas.StrokeColor = Color.FromArgb("#CBD7D0");
-            canvas.StrokeSize = 3;
+            canvas.StrokeColor = Color.FromArgb("#406357");
+            canvas.StrokeSize = 2;
             canvas.DrawLine(24, height - 25, width - 24, height - 25);
             DrawEquipment(canvas, center, height);
             DrawPerson(canvas, center, height);
-            canvas.FillColor = Color.FromArgb("#64716E");
+            canvas.FillColor = Color.FromArgb("#B9CDC1");
             canvas.FontSize = 12;
             var phase = Progress < 0.5f ? "POSIÇÃO INICIAL" : "POSIÇÃO FINAL";
             canvas.DrawString(phase, 8, height - 22, width - 16, 18,
@@ -105,7 +114,7 @@ public sealed class ExerciseDemoView : ContentView
 
         private void DrawEquipment(ICanvas canvas, float center, float height)
         {
-            canvas.StrokeColor = Color.FromArgb("#8A9992");
+            canvas.StrokeColor = Color.FromArgb("#7B9788");
             canvas.StrokeSize = 5;
             switch (motion)
             {
@@ -148,8 +157,8 @@ public sealed class ExerciseDemoView : ContentView
             var shoulder = new PointF(center, shoulderY + squatDrop * 0.55f);
             var neck = new PointF(center, shoulder.Y - 16);
 
-            canvas.StrokeColor = Color.FromArgb("#145A50");
-            canvas.StrokeSize = 10;
+            canvas.StrokeColor = Color.FromArgb("#C8F078");
+            canvas.StrokeSize = 11;
             canvas.StrokeLineCap = LineCap.Round;
             canvas.DrawLine(neck.X, neck.Y, hip.X, hip.Y);
             canvas.DrawLine(center - 18, shoulder.Y, center + 18, shoulder.Y);
@@ -182,7 +191,7 @@ public sealed class ExerciseDemoView : ContentView
                     (28, 34, shoulderY + 40, shoulderY + 53)
             };
 
-            canvas.StrokeColor = Color.FromArgb("#145A50");
+            canvas.StrokeColor = Color.FromArgb("#C8F078");
             canvas.StrokeSize = 8;
             canvas.StrokeLineCap = LineCap.Round;
             foreach (var side in new[] { -1f, 1f })
@@ -198,7 +207,7 @@ public sealed class ExerciseDemoView : ContentView
 
         private void DrawLegs(ICanvas canvas, float center, PointF hip, float p, float height)
         {
-            canvas.StrokeColor = Color.FromArgb("#34413D");
+            canvas.StrokeColor = Color.FromArgb("#D7E4D9");
             canvas.StrokeSize = 10;
             canvas.StrokeLineCap = LineCap.Round;
             if (motion == ExerciseMotion.LegExtension || motion == ExerciseMotion.LegCurl)

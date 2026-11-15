@@ -1,40 +1,11 @@
-# Personal Fitness Agent
+﻿# Personal Fitness Agent
 
-Aplicativo offline-first para registrar treinos, alimentacao, recuperacao e evolucao. Voz, geracao e revisao de recomendacoes ficam para uma versao futura integrada ao Azure.
+Repositório com duas áreas de aplicação:
 
-> **Status:** MVP offline em implementacao; o build Android final depende do Android SDK e JDK locais. Consulte o [guia de desenvolvimento](docs/DEVELOPMENT.md) para validacoes e limitacoes atuais.
+- `mobile/`: solução .NET MAUI Android, bibliotecas Core e SQLite, e testes.
+- `web/`: área reservada para a futura versão web, com hospedagem planejada no Azure.
+- `docs/`: documentação compartilhada e decisões arquiteturais.
 
-## Princípios
-- **Offline-first:** registrar e consultar dados essenciais no Android mesmo sem rede.
-- **Núcleo determinístico:** progressão, estimativas, regras de restrições e análises devem ser testáveis, sem dependência de LLM.
-- **Demonstrações locais:** ficha, imagens vetoriais e animações funcionam sem depender de mídia externa.
-- **Privacidade por padrão:** dados pessoais de saúde permanecem fora deste repositório público e de logs de desenvolvimento.
-- **Segurança:** o sistema não diagnostica, não prescreve reabilitação e nunca altera automaticamente exercícios com restrições.
-- **Sem chamadas de nuvem no MVP:** integrações Azure ficam para uma versão futura após os gates dos ADRs.
+A versão web ainda não possui implementação nem chamadas para Azure. A hospedagem é uma intenção futura; autenticação, persistência, sincronização e custos precisam de decisões explícitas antes da integração. O app mobile continua funcionando localmente e offline.
 
-## Documentação
-- [Estrutura e execução local](docs/DEVELOPMENT.md)
-- [Contexto e escopo](docs/PROJECT_CONTEXT.md)
-- [Requisitos e critérios de aceite](docs/REQUIREMENTS.md)
-- [Arquitetura](docs/ARCHITECTURE.md)
-- [Modelo de domínio](docs/DOMAIN_MODEL.md)
-- [Fluxo de voz](docs/VOICE_PIPELINE.md)
-- [Motor de restrições](docs/RESTRICTION_ENGINE.md)
-- [Análises e estimativas](docs/ANALYTICS.md)
-- [UX da ficha de treino A/B](docs/WORKOUT_VIEWER_UX.md)
-- [Catálogo alimentar offline](docs/FOOD_CATALOG.md)
-- [Segurança, privacidade e custos](docs/SECURITY_AND_COST.md)
-- [Backlog e sequenciamento](docs/BACKLOG.md)
-- [Instruções dos agentes](AGENTS.md)
-- [Registros de decisão](docs/adr/README.md)
-
-## Proposta técnica
-Android (.NET MAUI) + SQLite local + Core/Analytics em C#. Azure Functions e Speech são uma proposta futura, fora do runtime atual e dependentes dos gates de privacidade, orçamento e provedor dos ADRs. LLM não é exigido no MVP.
-
-## Próximos passos
-Consultar os work items em **Issues** e seguir a ordem de dependências indicada em `docs/BACKLOG.md`. Para executar tarefas, os agentes devem ler `AGENTS.md` antes de modificar código.
-
-## Aviso
-As funcionalidades de treino e alimentação são ferramentas de registro e apoio à decisão, não substituem avaliação individual de profissionais de saúde. Não coloque dados pessoais reais em issues, fixtures ou commits públicos.
-
-Licença: a definir pelo mantenedor.
+Consulte [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) para executar a solução mobile.

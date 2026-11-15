@@ -368,13 +368,23 @@ public sealed class FitnessDataService
 
     public WorkoutSheet ImportWorkoutSheet(WorkoutSheet sheet)
     {
+        return SaveWorkoutSheet(sheet, "workout_sheet.imported", "A/B workbook");
+    }
+
+    public WorkoutSheet CacheWorkoutSheet(WorkoutSheet sheet)
+    {
+        return SaveWorkoutSheet(sheet, "workout_sheet.cached", "Locally available A/B plan");
+    }
+
+    private WorkoutSheet SaveWorkoutSheet(WorkoutSheet sheet, string auditAction, string auditDetail)
+    {
         ArgumentNullException.ThrowIfNull(sheet);
         var existing = ImportedWorkoutSheet is { } current
             ? Find<WorkoutSheet>("workout-sheet", current.Id)
             : null;
         var imported = sheet with { Id = existing?.Value.Id ?? Guid.NewGuid(), ImportedAtUtc = DateTimeOffset.UtcNow };
         Save("workout-sheet", imported.Id, imported, existing?.Revision ?? 0,
-            auditAction: "workout_sheet.imported", auditDetail: "A/B workbook");
+            auditAction, auditDetail);
         return imported;
     }
 

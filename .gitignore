@@ -21,3 +21,6 @@ exports/
 
 # Local Android tooling
 .android-sdk/
+
+# Private per-user workout seed used only for a local APK build; never commit it.
+mobile/src/PersonalFitnessAgent.App/Resources/Raw/local-workout-seed.json

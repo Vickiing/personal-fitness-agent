@@ -17,6 +17,8 @@ Identifiers are stable; treat these as implementation contracts.
 - FR-012 Export data locally (JSON/CSV), import with preview, restore from backup; configurable deletion and audio retention.
 - FR-013 Cloud STT provider is replaceable, obeys opt-in, maximum audio length, per-day/month quotas and cost alerts.
 - FR-014 Offline sync/event replay uses immutable event ID, revision, timestamp, status and idempotent server confirmation, when server adapter is enabled.
+- FR-015 A workout professional, the user, or an explicitly approved assistant can publish a versioned workout plan from the web platform; the mobile app synchronizes it and keeps the latest accepted version available offline.
+- FR-016 Workout sessions and user-approved progress records created on mobile are queued locally and synchronized back to the web platform with stable IDs, revisions and idempotent acknowledgments.
 
 ## Non-functional
 - NFR-001 Brazilian Portuguese first, localization-ready.
@@ -41,8 +43,9 @@ Identifiers are stable; treat these as implementation contracts.
 9. Repeated sync event: one record, one acknowledgment; no duplicates.
 10. Export/restore: record IDs and audit histories remain intact.
 
-## Additional user-requested acceptance: workout-sheet viewer
-- Select an XLSX file explicitly; read only its A/B workout tabs locally and retain the normalized view in app-private SQLite.
-- Switch between A/B without a network request; keep the exercise list smooth with a virtualized mobile list.
-- Each exercise exposes a detail action with a readable illustration, on-demand animated movement demonstration, and numbered steps.
-- The source workbook is user data and must not be checked into source control, emitted to logs, or uploaded by the app.
+## Additional user-requested acceptance: synchronized workout experience
+- The mobile app does not ask the user to import a workout spreadsheet. Web-published plans are versioned and cached in app-private SQLite for offline use.
+- Switch between workout days without a network request; keep exercise browsing smooth with a virtualized mobile list.
+- Each exercise shows its prescription and has local artwork plus an on-demand animated movement demonstration and numbered steps.
+- Mobile sessions remain usable offline and are queued for the web platform with immutable event IDs, revisions and idempotent acknowledgment when sync is enabled.
+- Personal workout plans are user data. Never commit a real user's plan to source control, logs, fixtures or public build artifacts.

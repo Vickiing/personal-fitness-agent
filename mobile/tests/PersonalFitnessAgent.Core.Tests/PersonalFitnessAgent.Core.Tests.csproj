@@ -22,6 +22,7 @@
     <ProjectReference Include="..\..\src\PersonalFitnessAgent.Core\PersonalFitnessAgent.Core.csproj" />
     <ProjectReference Include="..\..\src\PersonalFitnessAgent.Infrastructure.Sqlite\PersonalFitnessAgent.Infrastructure.Sqlite.csproj" />
     <Compile Include="..\..\src\PersonalFitnessAgent.App\FitnessDataService.cs" Link="App\FitnessDataService.cs" />
+    <Compile Include="..\..\src\PersonalFitnessAgent.App\ExerciseVideoCatalog.cs" Link="App\ExerciseVideoCatalog.cs" />
   </ItemGroup>
 
 </Project>

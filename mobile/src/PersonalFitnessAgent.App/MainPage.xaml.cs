@@ -49,7 +49,7 @@ public sealed class MainPage : ContentPage
         _workoutLabel.FontSize = 21;
         _workoutLabel.FontAttributes = FontAttributes.Bold;
         _workoutLabel.LineBreakMode = LineBreakMode.WordWrap;
-        _openWorkout.Text = "Ver treino  ›";
+        _openWorkout.Text = "Ver treinos  ›";
         _openWorkout.BackgroundColor = Color.FromArgb("#FF642D");
         _openWorkout.TextColor = Ink;
         _openWorkout.FontSize = 14;
@@ -58,7 +58,7 @@ public sealed class MainPage : ContentPage
         _openWorkout.HeightRequest = 48;
         _openWorkout.HorizontalOptions = LayoutOptions.Start;
         _openWorkout.Padding = new Thickness(16, 0);
-        _openWorkout.Clicked += async (_, _) => await Shell.Current.GoToAsync("//workout");
+        _openWorkout.Clicked += async (_, _) => await OpenWorkoutAsync();
 
         var hero = new Border
         {
@@ -131,6 +131,30 @@ public sealed class MainPage : ContentPage
         RefreshSummary();
     }
 
+    private async Task OpenWorkoutAsync()
+    {
+        var sheet = App.Data.ImportedWorkoutSheet;
+        var pending = App.Data.Sessions
+            .Where(session => session.CompletedUtc is null)
+            .OrderByDescending(session => session.StartedUtc)
+            .FirstOrDefault();
+
+        if (sheet is not null && pending is not null)
+        {
+            var day = sheet.Days.FirstOrDefault(candidate =>
+                WorkoutSessionPage.CreatePlanFor(sheet, candidate, App.Data.Exercises).Id == pending.PlanId);
+            if (day is not null)
+            {
+                var page = new WorkoutSessionPage(sheet, day);
+                if (await page.StartAsync())
+                    await Shell.Current.Navigation.PushAsync(page);
+                return;
+            }
+        }
+
+        await Shell.Current.GoToAsync("//workout");
+    }
+
     private void RefreshSummary()
     {
         var sheet = App.Data.ImportedWorkoutSheet;
@@ -149,7 +173,7 @@ public sealed class MainPage : ContentPage
         }
         else
         {
-            _openWorkout.Text = "Ver treino  ›";
+            _openWorkout.Text = "Ver treinos  ›";
             var lastCompleted = sessions.FirstOrDefault(session => session.CompletedUtc is not null);
             _activityLabel.Text = lastCompleted is null
                 ? "Ainda sem treinos registrados"

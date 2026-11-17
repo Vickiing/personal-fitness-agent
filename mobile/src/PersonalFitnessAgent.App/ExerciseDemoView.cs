@@ -1,40 +1,41 @@
+using System.Net;
 using Microsoft.Maui.Graphics;
 using PersonalFitnessAgent.Core.Domain;
 
 namespace PersonalFitnessAgent.App;
 
 /// <summary>
-/// Shows open licensed live-action clips where an exact movement match is available.
-/// These clips stream from Wikimedia Commons and require an internet connection.
+/// Plays licensed live-action exercise videos in the workout guide.
+/// Videos stream from their source and require an internet connection.
 /// </summary>
 public sealed class ExerciseDemoView : ContentView
 {
-    private const string LicenseUrl = "https://creativecommons.org/licenses/by-sa/4.0/";
+    public static bool HasVideoFor(ExerciseMotion motion) => ExerciseVideoCatalog.For(motion) is not null;
+
+    public static string? PreviewUrlFor(ExerciseMotion motion) => ExerciseVideoCatalog.For(motion)?.PosterUrl;
+
     public ExerciseDemoView(ExerciseGuide guide)
     {
         ArgumentNullException.ThrowIfNull(guide);
 
-        var clip = FindClip(guide.Motion);
+        var clip = ExerciseVideoCatalog.For(guide.Motion);
         View content;
         if (clip is null)
         {
             content = new Border
             {
-                HeightRequest = 250,
+                HeightRequest = 94,
                 Stroke = Color.FromArgb("#344252"),
                 StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 24 },
                 BackgroundColor = Color.FromArgb("#151C24"),
-                Padding = 24,
-                Content = new VerticalStackLayout
+                Padding = 18,
+                Content = new Label
                 {
-                    Spacing = 10,
-                    VerticalOptions = LayoutOptions.Center,
-                    HorizontalOptions = LayoutOptions.Center,
-                    Children =
-                    {
-                        new Label { Text = "VÍDEO EM BREVE", FontSize = 13, FontAttributes = FontAttributes.Bold, TextColor = Color.FromArgb("#FF642D"), HorizontalTextAlignment = TextAlignment.Center },
-                        new Label { Text = "Demonstração em vídeo indisponível para este movimento.", FontSize = 14, TextColor = Color.FromArgb("#CFD8E2"), HorizontalTextAlignment = TextAlignment.Center, LineBreakMode = LineBreakMode.WordWrap }
-                    }
+                    Text = "Vídeo indisponível para este movimento.",
+                    FontSize = 13,
+                    TextColor = Color.FromArgb("#A7B2BF"),
+                    HorizontalTextAlignment = TextAlignment.Center,
+                    VerticalTextAlignment = TextAlignment.Center
                 }
             };
         }
@@ -44,37 +45,14 @@ public sealed class ExerciseDemoView : ContentView
             {
                 HeightRequest = 255,
                 BackgroundColor = Color.FromArgb("#151C24"),
-                Source = new HtmlWebViewSource
-                {
-                    Html = $"""
-                    <!doctype html>
-                    <html><head><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"></head>
-                    <body style="margin:0;background-color:#151C24;color:#CFD8E2">
-                      <video poster="{clip.PosterUrl}" style="width:100%;height:255px;object-fit:contain;background-color:#151C24" controls autoplay muted loop playsinline>
-                        <source src="{clip.VideoUrl}" type="video/webm">
-                        Este aparelho não conseguiu carregar o vídeo.
-                      </video>
-                    </body></html>
-                    """
-                }
+                Source = new HtmlWebViewSource { Html = BuildPlayerHtml(clip) }
             };
+
             var creditText = new FormattedString();
-            creditText.Spans.Add(new Span { Text = $"Loop em vídeo · {clip.Title}\nFonte: {clip.Author} · " });
-            creditText.Spans.Add(new Span
-            {
-                Text = "Wikimedia Commons",
-                TextColor = Color.FromArgb("#FF8A52"),
-                TextDecorations = TextDecorations.Underline,
-                GestureRecognizers = { new TapGestureRecognizer { Command = new Command(async () => await Browser.Default.OpenAsync(clip.CommonsPageUrl)) } }
-            });
+            creditText.Spans.Add(new Span { Text = $"{clip.Creator} · " });
+            creditText.Spans.Add(Link(clip.SourceName, clip.SourcePageUrl));
             creditText.Spans.Add(new Span { Text = " · " });
-            creditText.Spans.Add(new Span
-            {
-                Text = "CC BY-SA 4.0",
-                TextColor = Color.FromArgb("#FF8A52"),
-                TextDecorations = TextDecorations.Underline,
-                GestureRecognizers = { new TapGestureRecognizer { Command = new Command(async () => await Browser.Default.OpenAsync(LicenseUrl)) } }
-            });
+            creditText.Spans.Add(Link(clip.LicenseName, clip.LicenseUrl));
             creditText.Spans.Add(new Span { Text = " · requer internet" });
             var credit = new Label
             {
@@ -86,7 +64,7 @@ public sealed class ExerciseDemoView : ContentView
             };
             var sourceButton = new Button
             {
-                Text = "Abrir vídeo",
+                Text = "Fonte do vídeo",
                 FontSize = 12,
                 FontAttributes = FontAttributes.Bold,
                 TextColor = Color.FromArgb("#FF8A52"),
@@ -95,7 +73,7 @@ public sealed class ExerciseDemoView : ContentView
                 HorizontalOptions = LayoutOptions.Start,
                 Padding = new Thickness(4, 0)
             };
-            sourceButton.Clicked += async (_, _) => await Browser.Default.OpenAsync(clip.CommonsPageUrl);
+            sourceButton.Clicked += async (_, _) => await Browser.Default.OpenAsync(clip.SourcePageUrl);
             SemanticProperties.SetDescription(player, guide.ImageDescription);
             content = new VerticalStackLayout { Spacing = 0, Children = { player, credit, sourceButton } };
         }
@@ -111,22 +89,52 @@ public sealed class ExerciseDemoView : ContentView
         SemanticProperties.SetDescription(this, guide.ImageDescription);
     }
 
-    private static LicensedClip? FindClip(ExerciseMotion motion) => motion switch
+    private static string BuildPlayerHtml(ExerciseVideoAsset clip)
     {
-        ExerciseMotion.LatPulldown => new LicensedClip(
-            "Puxada na polia",
-            "https://upload.wikimedia.org/wikipedia/commons/6/69/Lat_pulldown_exercise_demonstration.webm",
-            "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/69/Lat_pulldown_exercise_demonstration.webm/500px--Lat_pulldown_exercise_demonstration.webm.jpg",
-            "Your Move",
-            "https://commons.wikimedia.org/wiki/File:Lat_pulldown_exercise_demonstration.webm"),
-        ExerciseMotion.LegExtension => new LicensedClip(
-            "Cadeira extensora",
-            "https://upload.wikimedia.org/wikipedia/commons/8/8f/Leg_extension_exercise_demonstration.webm",
-            "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8f/Leg_extension_exercise_demonstration.webm/500px--Leg_extension_exercise_demonstration.webm.jpg",
-            "Your Move",
-            "https://commons.wikimedia.org/wiki/File:Leg_extension_exercise_demonstration.webm"),
-        _ => null
-    };
+        var player = clip.Playback switch
+        {
+            ExerciseVideoPlayback.YouTubeEmbed => $"""
+                <iframe src="{WebUtility.HtmlEncode(clip.VideoUrl)}"
+                        title="{WebUtility.HtmlEncode(clip.Title)}"
+                        style="width:100%;height:255px;border:0;background-color:#151C24"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowfullscreen></iframe>
+                """,
+            _ => $"""
+                <video poster="{WebUtility.HtmlEncode(clip.PosterUrl ?? string.Empty)}"
+                       style="width:100%;height:255px;object-fit:contain;background-color:#151C24"
+                       controls autoplay muted loop playsinline preload="metadata"
+                       onerror="document.getElementById('fallback').style.display='block'">
+                  <source src="{WebUtility.HtmlEncode(clip.VideoUrl)}" type="{WebUtility.HtmlEncode(clip.VideoMimeType ?? "video/mp4")}">
+                  Este aparelho não conseguiu carregar o vídeo.
+                </video>
+                <div id="fallback" style="display:none;text-align:center;padding:12px">
+                  Vídeo indisponível. Use Fonte do vídeo.
+                </div>
+                """
+        };
 
-    private sealed record LicensedClip(string Title, string VideoUrl, string PosterUrl, string Author, string CommonsPageUrl);
+        return $"""
+            <!doctype html>
+            <html>
+              <head>
+                <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+              </head>
+              <body style="margin:0;background-color:#151C24;color:#CFD8E2;overflow:hidden">
+                {player}
+              </body>
+            </html>
+            """;
+    }
+
+    private static Span Link(string text, string url) => new()
+    {
+        Text = text,
+        TextColor = Color.FromArgb("#FF8A52"),
+        TextDecorations = TextDecorations.Underline,
+        GestureRecognizers =
+        {
+            new TapGestureRecognizer { Command = new Command(async () => await Browser.Default.OpenAsync(url)) }
+        }
+    };
 }

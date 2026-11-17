@@ -9,10 +9,10 @@ public sealed class TrainingSheetPage : ContentPage
 {
     private readonly Label _dayTitle = new();
     private readonly Label _daySummary = new();
-    private readonly Button _dayA = new();
-    private readonly Button _dayB = new();
+    private readonly HorizontalStackLayout _daySelector = new() { Spacing = 8 };
     private readonly Button _toggleNotes = new();
     private readonly VerticalStackLayout _notesPanel = new() { Spacing = 6, IsVisible = false };
+    private readonly VerticalStackLayout _notesHeader;
     private readonly CollectionView _exercises;
     private readonly Button _startSession = new()
     {
@@ -32,26 +32,12 @@ public sealed class TrainingSheetPage : ContentPage
         Title = "Treinos";
         BackgroundColor = Color.FromArgb("#0B0F14");
 
-        var title = new Label
+        var dayTabs = new ScrollView
         {
-            Text = "Meu treino",
-            FontSize = 24,
-            FontAttributes = FontAttributes.Bold,
-            TextColor = Color.FromArgb("#F3F6FA")
+            Orientation = ScrollOrientation.Horizontal,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Never,
+            Content = _daySelector
         };
-        SemanticProperties.SetHeadingLevel(title, SemanticHeadingLevel.Level1);
-
-        StyleDayButton(_dayA, "TREINO A");
-        StyleDayButton(_dayB, "TREINO B");
-        _dayA.Clicked += (_, _) => SelectDay("A");
-        _dayB.Clicked += (_, _) => SelectDay("B");
-        var dayTabs = new Grid
-        {
-            ColumnDefinitions = { new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Star) },
-            ColumnSpacing = 10,
-            Children = { _dayA, _dayB }
-        };
-        dayTabs.SetColumn(_dayB, 1);
 
         _dayTitle.FontSize = 18;
         _dayTitle.FontAttributes = FontAttributes.Bold;
@@ -66,6 +52,13 @@ public sealed class TrainingSheetPage : ContentPage
         _toggleNotes.HeightRequest = 36;
         _toggleNotes.Padding = new Thickness(0);
         var dayInfo = new VerticalStackLayout { Spacing = 3, Children = { _dayTitle, _daySummary } };
+        _notesHeader = new VerticalStackLayout
+        {
+            Padding = new Thickness(20, 0, 20, 8),
+            Spacing = 6,
+            Children = { _toggleNotes, _notesPanel }
+        };
+        _toggleNotes.Clicked += ToggleNotes;
         _startSession.Clicked += async (_, _) =>
         {
             if (_sheet is null || _selectedDay is null) return;
@@ -77,7 +70,7 @@ public sealed class TrainingSheetPage : ContentPage
         {
             Padding = new Thickness(18, 12, 18, 8),
             Spacing = 7,
-            Children = { title, dayTabs, dayInfo, _startSession }
+            Children = { dayTabs, dayInfo, _startSession }
         };
 
         _exercises = new CollectionView
@@ -87,6 +80,7 @@ public sealed class TrainingSheetPage : ContentPage
             ItemSizingStrategy = ItemSizingStrategy.MeasureAllItems,
             ItemsUpdatingScrollMode = ItemsUpdatingScrollMode.KeepScrollOffset,
             EmptyView = EmptyWorkoutState(),
+            Header = _notesHeader,
             ItemTemplate = new DataTemplate(CreateExerciseCard)
         };
 
@@ -116,7 +110,7 @@ public sealed class TrainingSheetPage : ContentPage
             VerticalOptions = LayoutOptions.Center,
             Children =
             {
-                new Label { Text = "A / B", FontSize = 25, FontAttributes = FontAttributes.Bold, TextColor = Color.FromArgb("#FF642D"), HorizontalTextAlignment = TextAlignment.Center },
+                new Label { Text = "TREINOS", FontSize = 13, FontAttributes = FontAttributes.Bold, TextColor = Color.FromArgb("#FF642D"), CharacterSpacing = 1.5, HorizontalTextAlignment = TextAlignment.Center },
                 new Label { Text = "Sua ficha aparecerá aqui", FontSize = 19, FontAttributes = FontAttributes.Bold, TextColor = Color.FromArgb("#F3F6FA"), HorizontalTextAlignment = TextAlignment.Center },
                 new Label { Text = "Quando um treino for disponibilizado na plataforma web, ele ficará salvo neste aparelho para consulta offline. Não é preciso importar planilha.", FontSize = 14, TextColor = Color.FromArgb("#A7B2BF"), HorizontalTextAlignment = TextAlignment.Center, HorizontalOptions = LayoutOptions.Center, MaximumWidthRequest = 330, LineBreakMode = LineBreakMode.WordWrap }
             }
@@ -134,6 +128,30 @@ public sealed class TrainingSheetPage : ContentPage
 
     private View CreateExerciseCard()
     {
+        var preview = new Image
+        {
+            Aspect = Aspect.AspectFill,
+            HorizontalOptions = LayoutOptions.Fill,
+            VerticalOptions = LayoutOptions.Fill
+        };
+        preview.SetBinding(Image.SourceProperty,
+            new Binding(nameof(WorkoutSheetExercise.Name), converter: new ExerciseThumbnailConverter()));
+        var videoBadge = new Label
+        {
+            Text = "▶ VÍDEO",
+            FontSize = 8,
+            FontAttributes = FontAttributes.Bold,
+            TextColor = Colors.White,
+            BackgroundColor = Color.FromArgb("#D90B0F14"),
+            HorizontalTextAlignment = TextAlignment.Center,
+            VerticalTextAlignment = TextAlignment.Center,
+            VerticalOptions = LayoutOptions.End,
+            HorizontalOptions = LayoutOptions.Fill,
+            Padding = new Thickness(2)
+        };
+        videoBadge.SetBinding(IsVisibleProperty,
+            new Binding(nameof(WorkoutSheetExercise.Name), converter: new ExerciseVideoVisibilityConverter()));
+        var posterContent = new Grid { Children = { preview, videoBadge } };
         var poster = new Border
         {
             WidthRequest = 66,
@@ -142,7 +160,7 @@ public sealed class TrainingSheetPage : ContentPage
             StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 16 },
             BackgroundColor = Color.FromArgb("#18212B"),
             VerticalOptions = LayoutOptions.Center,
-            Content = new Label { Text = "SEM\nVÍDEO", FontSize = 10, FontAttributes = FontAttributes.Bold, TextColor = Color.FromArgb("#FF642D"), HorizontalTextAlignment = TextAlignment.Center, VerticalTextAlignment = TextAlignment.Center }
+            Content = posterContent
         };
         var order = new Label
         {
@@ -225,6 +243,7 @@ public sealed class TrainingSheetPage : ContentPage
 
     private void SelectDay(string key)
     {
+        if (_selectedDay?.Key == key) return;
         _selectedDay = _sheet?.Days.FirstOrDefault(day => day.Key == key);
         ShowSelectedDay();
     }
@@ -258,15 +277,6 @@ public sealed class TrainingSheetPage : ContentPage
         }
         _toggleNotes.Text = _selectedDay.Notes.Count == 0 ? string.Empty : $"Orientações ({_selectedDay.Notes.Count})  ⌄";
         _toggleNotes.IsVisible = _selectedDay.Notes.Count > 0;
-        _toggleNotes.Clicked -= ToggleNotes;
-        _toggleNotes.Clicked += ToggleNotes;
-        var noteHeader = new VerticalStackLayout
-        {
-            Padding = new Thickness(20, 0, 20, 8),
-            Spacing = 6,
-            Children = { _toggleNotes, _notesPanel }
-        };
-        _exercises.Header = noteHeader;
         _exercises.ItemsSource = _selectedDay.Exercises;
     }
 
@@ -280,12 +290,29 @@ public sealed class TrainingSheetPage : ContentPage
 
     private void UpdateDayButtons()
     {
-        SetDayStyle(_dayA, _selectedDay?.Key == "A");
-        SetDayStyle(_dayB, _selectedDay?.Key == "B");
-        _dayA.IsEnabled = _sheet?.Days.Any(day => day.Key == "A") == true;
-        _dayB.IsEnabled = _sheet?.Days.Any(day => day.Key == "B") == true;
-        _dayA.Opacity = _dayA.IsEnabled ? 1 : 0.55;
-        _dayB.Opacity = _dayB.IsEnabled ? 1 : 0.55;
+        if (_sheet is null)
+        {
+            _daySelector.Children.Clear();
+            return;
+        }
+
+        var labels = _sheet.Days.Select(day => $"Treino {day.Key}").ToArray();
+        var existingButtons = _daySelector.Children.OfType<Button>().ToArray();
+        if (!existingButtons.Select(button => button.Text).SequenceEqual(labels, StringComparer.Ordinal))
+        {
+            _daySelector.Children.Clear();
+            foreach (var day in _sheet.Days)
+            {
+                var button = new Button();
+                StyleDayButton(button, $"Treino {day.Key}");
+                button.Clicked += (_, _) => SelectDay(day.Key);
+                SemanticProperties.SetDescription(button, $"Mostrar todos os exercícios do treino {day.Key}.");
+                _daySelector.Children.Add(button);
+            }
+        }
+
+        foreach (var button in _daySelector.Children.OfType<Button>())
+            SetDayStyle(button, button.Text == $"Treino {_selectedDay?.Key}");
     }
 
     private static void StyleDayButton(Button button, string text)
@@ -304,6 +331,29 @@ public sealed class TrainingSheetPage : ContentPage
         button.BackgroundColor = Color.FromArgb(selected ? "#18212B" : "#1B2732");
         button.TextColor = selected ? Colors.White : Color.FromArgb("#CFD8E2");
     }
+}
+
+internal sealed class ExerciseThumbnailConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is not string name || string.IsNullOrWhiteSpace(name)) return null!;
+        var url = ExerciseDemoView.PreviewUrlFor(ExerciseGuideCatalog.For(name).Motion);
+        return url is null ? null! : ImageSource.FromUri(new Uri(url));
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
+internal sealed class ExerciseVideoVisibilityConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        value is string name && !string.IsNullOrWhiteSpace(name) &&
+        ExerciseDemoView.HasVideoFor(ExerciseGuideCatalog.For(name).Motion);
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
 }
 
 internal sealed class ExerciseCardSummaryConverter : IValueConverter

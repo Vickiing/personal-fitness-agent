@@ -6,35 +6,56 @@ using PersonalFitnessAgent.Core.Domain;
 
 namespace PersonalFitnessAgent.App;
 
-/// <summary>Offline session logger for an imported workout day. Loads are user entered and never auto-adjusted.</summary>
+/// <summary>Offline workout logger. Loads are entered by the user and never adjusted automatically.</summary>
 public sealed class WorkoutSessionPage : ContentPage
 {
     private readonly WorkoutSheetDay _day;
     private readonly PlanDto _plan;
     private readonly int _initialExerciseIndex;
-    private readonly Picker _exercisePicker = new() { Title = "Selecione um exercício" };
-    private readonly Entry _load = new() { Placeholder = "Carga (kg)", Keyboard = Keyboard.Numeric };
-    private readonly Entry _reps = new() { Placeholder = "Repetições", Keyboard = Keyboard.Numeric };
-    private readonly Entry _rir = new() { Placeholder = "RIR (opcional)", Keyboard = Keyboard.Numeric };
-    private readonly Entry _notes = new() { Placeholder = "Observação (opcional)" };
-    private readonly Entry _restSeconds = new() { Text = "90", Keyboard = Keyboard.Numeric, WidthRequest = 90 };
-    private readonly Label _status = new() { FontSize = 13, TextColor = Color.FromArgb("#A7B2BF") };
-    private readonly Label _exerciseProgress = new() { FontSize = 15, FontAttributes = FontAttributes.Bold, TextColor = Color.FromArgb("#F3F6FA"), HorizontalTextAlignment = TextAlignment.Center };
-    private readonly VerticalStackLayout _setHistory = new() { Spacing = 6 };
-    private readonly VerticalStackLayout _seriesForm = new() { Spacing = 11 };
+    private readonly Picker _exercisePicker = new() { IsVisible = false };
+    private readonly Entry _load = new()
+    {
+        Placeholder = "Carga",
+        Keyboard = Keyboard.Numeric,
+        FontSize = 24,
+        FontAttributes = FontAttributes.Bold,
+        TextColor = Color.FromArgb("#F3F6FA"),
+        PlaceholderColor = Color.FromArgb("#8997A6"),
+        BackgroundColor = Color.FromArgb("#1B2732"),
+        HeightRequest = 58
+    };
+    private readonly Entry _reps = new()
+    {
+        Placeholder = "Reps",
+        Keyboard = Keyboard.Numeric,
+        FontSize = 24,
+        FontAttributes = FontAttributes.Bold,
+        TextColor = Color.FromArgb("#F3F6FA"),
+        PlaceholderColor = Color.FromArgb("#8997A6"),
+        BackgroundColor = Color.FromArgb("#1B2732"),
+        HeightRequest = 58
+    };
+    private readonly Entry _restSeconds = new() { Text = "90", Keyboard = Keyboard.Numeric };
+    private readonly Label _status = new() { FontSize = 13, TextColor = Color.FromArgb("#FF9A6B"), IsVisible = false };
+    private readonly Label _exerciseProgress = new() { FontSize = 12, FontAttributes = FontAttributes.Bold, TextColor = Color.FromArgb("#FF8A52"), CharacterSpacing = 1.2 };
+    private readonly Label _exerciseName = new() { FontSize = 25, FontAttributes = FontAttributes.Bold, TextColor = Color.FromArgb("#F3F6FA"), LineBreakMode = LineBreakMode.WordWrap };
+    private readonly Label _seriesHeading = new() { FontSize = 12, FontAttributes = FontAttributes.Bold, TextColor = Color.FromArgb("#A7B2BF"), CharacterSpacing = 1 };
+    private readonly VerticalStackLayout _setHistory = new() { Spacing = 5 };
+    private readonly VerticalStackLayout _seriesForm = new() { Spacing = 12 };
+    private readonly Border _seriesPanel;
     private readonly Border _restPanel;
-    private readonly Label _restHeading = new() { FontSize = 11, FontAttributes = FontAttributes.Bold, TextColor = Color.FromArgb("#FF8A52") };
-    private readonly Label _restNextSeries = new() { FontSize = 14, TextColor = Color.FromArgb("#CFD8E2"), HorizontalTextAlignment = TextAlignment.Center };
-    private readonly Label _restCountdown = new() { Text = "01:30", FontSize = 38, FontAttributes = FontAttributes.Bold, TextColor = Color.FromArgb("#F3F6FA"), HorizontalTextAlignment = TextAlignment.Center };
-    private readonly Button _restButton = new() { Text = "Encerrar descanso", HeightRequest = 48, CornerRadius = 16, BackgroundColor = Color.FromArgb("#FF642D"), TextColor = Colors.White, FontAttributes = FontAttributes.Bold };
-    private readonly Button _saveButton = new() { Text = "Salvar série", FontAttributes = FontAttributes.Bold, HeightRequest = 52, CornerRadius = 16, BackgroundColor = Color.FromArgb("#18212B"), TextColor = Colors.White };
-    private readonly Button _resumeButton = SecondaryButton("Retomar sessão");
+    private readonly Border _completePanel;
+    private readonly Label _restCountdown = new() { Text = "01:30", FontSize = 54, FontAttributes = FontAttributes.Bold, TextColor = Color.FromArgb("#F3F6FA"), HorizontalTextAlignment = TextAlignment.Center };
+    private readonly Label _restNextSeries = new() { FontSize = 14, TextColor = Color.FromArgb("#A7B2BF"), HorizontalTextAlignment = TextAlignment.Center };
+    private readonly Button _restButton = new() { Text = "Pular descanso", HeightRequest = 52, CornerRadius = 17, BackgroundColor = Color.FromArgb("#FF642D"), TextColor = Colors.White, FontAttributes = FontAttributes.Bold, FontSize = 15 };
+    private readonly Button _saveButton = new() { Text = "Série concluída", FontAttributes = FontAttributes.Bold, FontSize = 15, HeightRequest = 54, CornerRadius = 17, BackgroundColor = Color.FromArgb("#FF642D"), TextColor = Colors.White };
+    private readonly Button _pauseButton = SecondaryButton("Pausar treino");
     private readonly IDispatcherTimer _timer;
     private DateTimeOffset? _restDeadline;
     private SessionDto? _session;
-    private Guid? _editingSetId;
     private string? _queuedLoad;
     private bool _isResting;
+    private bool _allExercisesComplete;
     private bool _finishing;
 
     public WorkoutSessionPage(WorkoutSheet sheet, WorkoutSheetDay day, int initialExerciseIndex = 0)
@@ -42,88 +63,114 @@ public sealed class WorkoutSessionPage : ContentPage
         ArgumentNullException.ThrowIfNull(sheet);
         ArgumentNullException.ThrowIfNull(day);
         _day = day;
-        _initialExerciseIndex = Math.Clamp(initialExerciseIndex, 0, day.Exercises.Count - 1);
+        _initialExerciseIndex = Math.Clamp(initialExerciseIndex, 0, Math.Max(0, day.Exercises.Count - 1));
         _plan = CreatePlanFor(sheet, day, App.Data.Exercises);
-        Title = "Registrar treino";
+        Title = $"Treino {day.Key}";
         BackgroundColor = Color.FromArgb("#0B0F14");
+
         foreach (var exercise in day.Exercises) _exercisePicker.Items.Add(exercise.Name);
-        _exercisePicker.SelectedIndex = 0;
         _exercisePicker.SelectedIndexChanged += (_, _) => ApplyExerciseSelection();
 
         _saveButton.Clicked += (_, _) => SaveSet();
         _restButton.Clicked += (_, _) => EndRest();
-        var previous = SecondaryButton("‹ Exercício anterior");
-        var next = SecondaryButton("Próximo exercício ›");
-        previous.Clicked += (_, _) => SelectExercise(-1);
-        next.Clicked += (_, _) => SelectExercise(1);
-        var exerciseNavigation = new Grid
+        _pauseButton.Clicked += async (_, _) => await PauseAndExitAsync();
+
+        var loadField = InputField("CARGA · KG", _load);
+        var repsField = InputField("REPETIÇÕES", _reps);
+        var inputs = new Grid
         {
             ColumnDefinitions = { new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Star) },
-            ColumnSpacing = 8,
-            Children = { previous, next }
+            ColumnSpacing = 10,
+            Children = { loadField, repsField }
         };
-        exerciseNavigation.SetColumn(next, 1);
+        inputs.SetColumn(repsField, 1);
 
-        var pause = SecondaryButton("Pausar e sair");
-        pause.Clicked += async (_, _) => await PauseAndExitAsync();
-        _resumeButton.IsVisible = false;
-        _resumeButton.Clicked += async (_, _) => await ResumeCurrentSessionAsync();
-
-        _seriesForm.Children.Add(_load);
-        _seriesForm.Children.Add(_reps);
-        _seriesForm.Children.Add(_rir);
-        _seriesForm.Children.Add(_notes);
+        _seriesForm.Children.Add(_seriesHeading);
+        _seriesForm.Children.Add(inputs);
         _seriesForm.Children.Add(_saveButton);
+        _seriesPanel = new Border
+        {
+            Stroke = Color.FromArgb("#344252"),
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 22 },
+            BackgroundColor = Color.FromArgb("#151C24"),
+            Padding = new Thickness(16),
+            Content = _seriesForm
+        };
+
         _restPanel = new Border
         {
             IsVisible = false,
-            Stroke = Color.FromArgb("#293440"),
-            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 20 },
+            Stroke = Color.FromArgb("#344252"),
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 22 },
             BackgroundColor = Color.FromArgb("#151C24"),
-            Padding = new Thickness(16),
+            Padding = new Thickness(18),
             Content = new VerticalStackLayout
             {
-                Spacing = 10,
+                Spacing = 12,
                 Children =
                 {
-                    _restHeading,
+                    new Label { Text = "DESCANSO", FontSize = 11, FontAttributes = FontAttributes.Bold, TextColor = Color.FromArgb("#FF8A52"), CharacterSpacing = 1.1, HorizontalTextAlignment = TextAlignment.Center },
                     _restNextSeries,
                     _restCountdown,
-                    new HorizontalStackLayout { Spacing = 8, HorizontalOptions = LayoutOptions.Center, Children = { new Label { Text = "Descanso (s)", VerticalTextAlignment = TextAlignment.Center, TextColor = Color.FromArgb("#A7B2BF") }, _restSeconds } },
                     _restButton
                 }
             }
         };
-        var finish = SecondaryButton("Concluir treino");
-        finish.Clicked += async (_, _) => await FinishAsync();
 
-        var content = new VerticalStackLayout
+        var completeButton = new Button
         {
-            Padding = new Thickness(20, 16, 20, 26),
-            Spacing = 11,
-            Children =
+            Text = "Concluir treino",
+            FontAttributes = FontAttributes.Bold,
+            FontSize = 15,
+            HeightRequest = 54,
+            CornerRadius = 17,
+            BackgroundColor = Color.FromArgb("#FF642D"),
+            TextColor = Colors.White
+        };
+        completeButton.Clicked += async (_, _) => await FinishAsync();
+        _completePanel = new Border
+        {
+            IsVisible = false,
+            Stroke = Color.FromArgb("#344252"),
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 22 },
+            BackgroundColor = Color.FromArgb("#151C24"),
+            Padding = new Thickness(18),
+            Content = new VerticalStackLayout
             {
-                new Label { Text = _day.Title, FontSize = 24, FontAttributes = FontAttributes.Bold, TextColor = Color.FromArgb("#F3F6FA") },
-                new Label { Text = "Registre cada série. A carga é informada por você e fica salva neste aparelho.", FontSize = 13, TextColor = Color.FromArgb("#A7B2BF"), LineBreakMode = LineBreakMode.WordWrap },
-                _exerciseProgress,
-                exerciseNavigation,
-                _exercisePicker,
-                new Label { Text = "SÉRIES DESTE EXERCÍCIO", FontSize = 11, FontAttributes = FontAttributes.Bold, TextColor = Color.FromArgb("#A7B2BF"), CharacterSpacing = 1.1 },
-                _setHistory,
-                _seriesForm,
-                _restPanel,
-                _status,
-                _resumeButton,
-                pause,
-                finish
+                Spacing = 12,
+                Children =
+                {
+                    new Label { Text = "Treino concluído", FontSize = 21, FontAttributes = FontAttributes.Bold, TextColor = Color.FromArgb("#F3F6FA"), HorizontalTextAlignment = TextAlignment.Center },
+                    completeButton
+                }
             }
         };
-        Content = new ScrollView { Content = content };
+
+        Content = new ScrollView
+        {
+            Content = new VerticalStackLayout
+            {
+                Padding = new Thickness(20, 16, 20, 28),
+                Spacing = 14,
+                Children =
+                {
+                    _exerciseProgress,
+                    _exerciseName,
+                    _setHistory,
+                    _seriesPanel,
+                    _restPanel,
+                    _completePanel,
+                    _status,
+                    _pauseButton
+                }
+            }
+        };
+
         _timer = Dispatcher.CreateTimer();
         _timer.Interval = TimeSpan.FromSeconds(1);
         _timer.IsRepeating = true;
         _timer.Tick += (_, _) => UpdateCountdown();
-        ApplyExerciseSelection();
+        if (_day.Exercises.Count > 0) _exercisePicker.SelectedIndex = _initialExerciseIndex;
     }
 
     protected override void OnAppearing()
@@ -157,20 +204,20 @@ public sealed class WorkoutSessionPage : ContentPage
             : new PlanDto(pending.PlanId, pending.PlanVersion, _day.Title, pending.PlanSnapshot);
 
         var reviews = App.Data.EvaluatePlan(targetPlan);
-        var blocked = reviews.Where(x => x.Evaluation.Decision is RestrictionDecision.Block or RestrictionDecision.RequiresReview).ToArray();
+        var blocked = reviews.Where(item => item.Evaluation.Decision is RestrictionDecision.Block or RestrictionDecision.RequiresReview).ToArray();
         if (blocked.Length > 0)
         {
-            await DisplayAlertAsync("Revisão necessária", string.Join("\n", blocked.Select(x => x.Exercise.Name + ": é necessária uma revisão antes de iniciar.")), "Entendi");
+            await DisplayAlertAsync("Revisão necessária",
+                string.Join("\n", blocked.Select(item => item.Exercise.Name + ": é necessária uma revisão antes de iniciar.")), "OK");
             return false;
         }
 
-        var warnings = reviews.Where(x => x.Evaluation.Decision == RestrictionDecision.Warn).ToArray();
-        var acknowledged = warnings.Length == 0;
-        if (!acknowledged)
+        var warnings = reviews.Where(item => item.Evaluation.Decision == RestrictionDecision.Warn).ToArray();
+        if (warnings.Length > 0)
         {
-            acknowledged = await DisplayAlertAsync("Aviso das suas restrições",
-                string.Join("\n", warnings.Select(x => x.Exercise.Name + ": há um aviso registrado. Confirme que deseja prosseguir.")),
-                "Confirmar aviso", "Voltar");
+            var acknowledged = await DisplayAlertAsync("Aviso",
+                string.Join("\n", warnings.Select(item => item.Exercise.Name + ": há um aviso registrado.")),
+                "Continuar", "Voltar");
             if (!acknowledged) return false;
         }
 
@@ -178,267 +225,251 @@ public sealed class WorkoutSessionPage : ContentPage
         {
             if (pending is not null)
             {
-                var resume = await DisplayAlertAsync("Sessão pausada",
-                    $"Há uma sessão não concluída de {pending.PlanSnapshot.Length} exercícios com {pending.Sets.Length} série(s) salva(s). Deseja retomá-la?",
-                    "Retomar", "Agora não");
-                if (!resume) return false;
                 _session = App.Data.ResumeSession(pending.Id);
-                _exercisePicker.SelectedIndex = Math.Clamp(_session.ActiveExerciseIndex, 0, _day.Exercises.Count - 1);
+                var nextExercise = FindNextExerciseIndex(_session);
+                _allExercisesComplete = IsWorkoutComplete(_session);
+                _exercisePicker.SelectedIndex = nextExercise;
+                _status.Text = string.Empty;
                 PrefillLoadFromLastSet();
-                _status.Text = "Sessão retomada. Suas séries salvas foram recuperadas.";
             }
             else
             {
-                _session = App.Data.StartSession(_plan, acknowledged);
-                if (_initialExerciseIndex > 0)
-                    _session = App.Data.UpdateSessionProgress(_session.Id, _initialExerciseIndex);
+                _session = App.Data.StartSession(_plan, warningsAcknowledged: warnings.Length > 0);
                 _exercisePicker.SelectedIndex = _initialExerciseIndex;
-                _status.Text = "Sessão iniciada. O progresso será salvo neste aparelho.";
             }
+
             RefreshSessionUi();
             return true;
         }
-        catch (InvalidOperationException ex)
+        catch (Exception exception) when (exception is InvalidOperationException or KeyNotFoundException or ArgumentOutOfRangeException)
         {
-            await DisplayAlertAsync("Não foi possível iniciar", ex.Message, "OK");
+            await DisplayAlertAsync("Não foi possível abrir o treino", exception.Message, "OK");
             return false;
         }
-    }
-
-    private void SelectExercise(int offset)
-    {
-        if (_day.Exercises.Count == 0) return;
-        var current = Math.Max(0, _exercisePicker.SelectedIndex);
-        _exercisePicker.SelectedIndex = (current + offset + _day.Exercises.Count) % _day.Exercises.Count;
     }
 
     private void ApplyExerciseSelection()
     {
         if (_exercisePicker.SelectedIndex < 0) return;
-        if (_session is { CompletedUtc: null, PausedUtc: null } && _session.ActiveExerciseIndex != _exercisePicker.SelectedIndex)
+        var index = _exercisePicker.SelectedIndex;
+        _restSeconds.Text = ParseRestSeconds(_day.Exercises[index].Rest).ToString(CultureInfo.InvariantCulture);
+        if (_session is { CompletedUtc: null, PausedUtc: null } && _session.ActiveExerciseIndex != index)
         {
-            try { _session = App.Data.UpdateSessionProgress(_session.Id, _exercisePicker.SelectedIndex); }
-            catch (Exception ex) when (ex is InvalidOperationException or KeyNotFoundException or ArgumentOutOfRangeException)
+            try { _session = App.Data.UpdateSessionProgress(_session.Id, index); }
+            catch (Exception exception) when (exception is InvalidOperationException or KeyNotFoundException or ArgumentOutOfRangeException)
             {
-                _status.Text = $"Não foi possível salvar o exercício atual: {ex.Message}";
+                ShowStatus($"Não foi possível abrir o exercício: {exception.Message}");
             }
         }
-        var prescribed = _day.Exercises[_exercisePicker.SelectedIndex].Rest;
-        _restSeconds.Text = ParseRestSeconds(prescribed).ToString(CultureInfo.InvariantCulture);
         RefreshSessionUi();
-        if (_session is null)
-            _status.Text = string.IsNullOrWhiteSpace(prescribed)
-                ? "Descanso sem prescrição; ajuste o cronômetro se desejar."
-                : $"Descanso da ficha: {prescribed}. Você pode ajustar o cronômetro.";
     }
 
     private void RefreshSessionUi()
     {
-        if (_exercisePicker.SelectedIndex < 0) return;
+        if (_exercisePicker.SelectedIndex < 0 || _day.Exercises.Count == 0) return;
         var index = _exercisePicker.SelectedIndex;
         var exercise = _plan.Exercises[index];
-        var sets = _session?.Sets.Where(set => set.ExerciseId == exercise.Id).OrderBy(set => set.Index).ToArray() ?? [];
-        var planned = ParsePlannedSets(_day.Exercises[index].Sets);
-        _exerciseProgress.Text = planned is null
-            ? $"Exercício {index + 1} de {_day.Exercises.Count}  ·  {sets.Length} série(s)"
-            : $"Exercício {index + 1} de {_day.Exercises.Count}  ·  {sets.Length}/{planned} séries";
+        var savedSets = _session?.Sets.Where(set => set.ExerciseId == exercise.Id).OrderBy(set => set.Index).ToArray() ?? [];
+        var plannedSets = ParsePlannedSets(_day.Exercises[index].Sets);
+        _exerciseProgress.Text = $"EXERCÍCIO {index + 1} / {_day.Exercises.Count}";
+        _seriesHeading.Text = plannedSets is null
+            ? $"SÉRIE {savedSets.Length + 1}"
+            : $"SÉRIE {savedSets.Length + 1} DE {plannedSets}";
+        _exerciseName.Text = exercise.Name;
+
         _setHistory.Children.Clear();
-        if (sets.Length == 0)
-        {
-            _setHistory.Children.Add(new Label { Text = "Nenhuma série registrada.", FontSize = 13, TextColor = Color.FromArgb("#A7B2BF") });
-        }
-        else
-        {
-            foreach (var set in sets) _setHistory.Children.Add(CreateSetRow(set));
-        }
-        var canEdit = _session is { CompletedUtc: null, PausedUtc: null };
-        _saveButton.IsEnabled = canEdit && !_finishing && !_isResting;
-        _seriesForm.IsVisible = canEdit && !_isResting;
-        _restPanel.IsVisible = canEdit && _isResting;
-        _restButton.IsEnabled = canEdit && _isResting;
-        _exercisePicker.IsEnabled = canEdit && !_isResting;
-        _resumeButton.IsVisible = _session is { CompletedUtc: null, PausedUtc: not null };
+        foreach (var set in savedSets) _setHistory.Children.Add(CreateSetRow(set));
+        _setHistory.IsVisible = savedSets.Length > 0;
+
+        var active = _session is { CompletedUtc: null, PausedUtc: null };
+        var showForm = active && !_isResting && !_allExercisesComplete;
+        _seriesPanel.IsVisible = showForm;
+        _restPanel.IsVisible = active && _isResting;
+        _completePanel.IsVisible = active && !_isResting && _allExercisesComplete;
+        _pauseButton.IsVisible = active;
+        _restButton.IsEnabled = active && _isResting;
+        _saveButton.IsEnabled = showForm && !_finishing;
+        _exercisePicker.IsEnabled = active && !_isResting;
+        _status.IsVisible = !string.IsNullOrWhiteSpace(_status.Text);
     }
 
-    private View CreateSetRow(SetDto set)
+    private static View InputField(string title, Entry entry) => new VerticalStackLayout
     {
-        var load = set.LoadKg is null ? "sem carga" : $"{set.LoadKg.Value.ToString("0.##", CultureInfo.CurrentCulture)} kg";
-        var reps = set.Reps is null ? "reps —" : $"{set.Reps} reps";
-        var details = new Label
+        Spacing = 5,
+        Children =
         {
-            Text = $"Série {set.Index}: {load} · {reps}" + (set.Rir is null ? "" : $" · RIR {set.Rir.Value.ToString("0.#", CultureInfo.CurrentCulture)}"),
-            FontSize = 13,
-            TextColor = Color.FromArgb("#CFD8E2"),
-            VerticalTextAlignment = TextAlignment.Center,
-            LineBreakMode = LineBreakMode.WordWrap
-        };
-        var edit = new Button { Text = "Editar", FontSize = 12, HeightRequest = 40, Padding = new Thickness(10, 0), BackgroundColor = Color.FromArgb("#1B2732"), TextColor = Color.FromArgb("#F3F6FA"), CornerRadius = 12 };
-        edit.Clicked += (_, _) => LoadSetForCorrection(set);
-        var remove = new Button { Text = "Remover", FontSize = 12, HeightRequest = 40, Padding = new Thickness(10, 0), BackgroundColor = Color.FromArgb("#35241D"), TextColor = Color.FromArgb("#FF9A6B"), CornerRadius = 12 };
-        remove.Clicked += async (_, _) => await DeleteSetAsync(set);
-        var actions = new HorizontalStackLayout { Spacing = 4, Children = { edit, remove } };
+            new Label { Text = title, FontSize = 10, FontAttributes = FontAttributes.Bold, TextColor = Color.FromArgb("#A7B2BF"), CharacterSpacing = 0.7 },
+            new Border
+            {
+                Stroke = Color.FromArgb("#344252"),
+                StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 14 },
+                BackgroundColor = Color.FromArgb("#1B2732"),
+                Padding = new Thickness(10, 0),
+                Content = entry
+            }
+        }
+    };
+
+    private static View CreateSetRow(SetDto set)
+    {
+        var load = set.LoadKg is null ? "—" : $"{set.LoadKg.Value.ToString("0.##", CultureInfo.CurrentCulture)} kg";
+        var reps = set.Reps is null ? "—" : $"{set.Reps} reps";
         var row = new Grid
         {
-            ColumnDefinitions = { new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto) },
-            ColumnSpacing = 8,
-            Children = { details, actions }
+            ColumnDefinitions = { new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto) }
         };
-        row.SetColumn(actions, 1);
+        row.Add(new Label { Text = $"✓  Série {set.Index}", FontSize = 13, FontAttributes = FontAttributes.Bold, TextColor = Color.FromArgb("#FF8A52"), VerticalTextAlignment = TextAlignment.Center });
+        row.Add(new Label { Text = $"{load}   ×   {reps}", FontSize = 13, TextColor = Color.FromArgb("#F3F6FA"), VerticalTextAlignment = TextAlignment.Center, HorizontalTextAlignment = TextAlignment.End }, 1, 0);
         return new Border
         {
-            Stroke = Color.FromArgb("#293440"),
-            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 14 },
-            BackgroundColor = Color.FromArgb("#151C24"),
-            Padding = new Thickness(10, 6),
+            StrokeThickness = 0,
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 12 },
+            BackgroundColor = Color.FromArgb("#1B2732"),
+            Padding = new Thickness(12, 8),
             Content = row
         };
-    }
-
-    private void LoadSetForCorrection(SetDto set)
-    {
-        _editingSetId = set.Id;
-        _load.Text = set.LoadKg?.ToString(CultureInfo.CurrentCulture);
-        _reps.Text = set.Reps?.ToString(CultureInfo.CurrentCulture);
-        _rir.Text = set.Rir?.ToString(CultureInfo.CurrentCulture);
-        _notes.Text = set.Notes;
-        _saveButton.Text = $"Salvar correção da série {set.Index}";
-        _status.Text = "Editando uma série salva. Confirme para substituir os valores.";
-    }
-
-    private async Task DeleteSetAsync(SetDto set)
-    {
-        var approved = await DisplayAlertAsync("Remover série?", $"A série {set.Index} será removida do registro local.", "Remover", "Cancelar");
-        if (!approved || _session is null) return;
-        try
-        {
-            _session = App.Data.DeleteSet(_session.Id, set.Id);
-            ClearCorrection();
-            RefreshSessionUi();
-            _status.Text = "Série removida.";
-        }
-        catch (Exception ex) when (ex is InvalidOperationException or KeyNotFoundException)
-        {
-            _status.Text = $"Não foi possível remover: {ex.Message}";
-        }
     }
 
     private void SaveSet()
     {
         if (_session is null || _exercisePicker.SelectedIndex < 0) return;
+
         decimal? load = null;
         if (!string.IsNullOrWhiteSpace(_load.Text))
         {
             if (!decimal.TryParse(_load.Text, NumberStyles.Number, CultureInfo.CurrentCulture, out var parsedLoad) || parsedLoad < 0)
             {
-                _status.Text = "Informe uma carga em kg válida, usando o separador decimal do aparelho.";
+                ShowStatus("Confira a carga.");
                 return;
             }
             load = parsedLoad;
         }
+
         int? reps = null;
         if (!string.IsNullOrWhiteSpace(_reps.Text))
         {
             if (!int.TryParse(_reps.Text, NumberStyles.Integer, CultureInfo.CurrentCulture, out var parsedReps) || parsedReps < 0)
             {
-                _status.Text = "Informe um número válido de repetições.";
+                ShowStatus("Confira as repetições.");
                 return;
             }
             reps = parsedReps;
         }
-        decimal? rir = null;
-        if (!string.IsNullOrWhiteSpace(_rir.Text))
-        {
-            if (!decimal.TryParse(_rir.Text, NumberStyles.Number, CultureInfo.CurrentCulture, out var parsedRir) || parsedRir < 0)
-            {
-                _status.Text = "Informe um RIR válido.";
-                return;
-            }
-            rir = parsedRir;
-        }
+
         if (load is null && reps is null)
         {
-            _status.Text = "Informe a carga ou as repetições para salvar a série.";
+            ShowStatus("Informe carga ou repetições.");
             return;
         }
 
         try
         {
-            if (_editingSetId is Guid setId)
+            var exercise = _plan.Exercises[_exercisePicker.SelectedIndex];
+            _session = App.Data.AddSet(_session.Id, exercise.Id, load, reps, null, null);
+            _queuedLoad = load?.ToString("0.##", CultureInfo.CurrentCulture);
+            _load.Text = _reps.Text = string.Empty;
+            _status.Text = string.Empty;
+            StartRest();
+            RefreshSessionUi();
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or KeyNotFoundException or ArgumentException)
+        {
+            ShowStatus($"Não foi possível salvar: {exception.Message}");
+        }
+    }
+
+    private void StartRest()
+    {
+        if (!int.TryParse(_restSeconds.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var seconds) || seconds is < 1 or > 7200)
+            seconds = 90;
+
+        var index = _exercisePicker.SelectedIndex;
+        var exercise = _plan.Exercises[index];
+        var completedSets = _session?.Sets.Count(set => set.ExerciseId == exercise.Id) ?? 0;
+        var plannedSets = ParsePlannedSets(_day.Exercises[index].Sets);
+        var lastSet = plannedSets is not null && completedSets >= plannedSets;
+        _restNextSeries.Text = lastSet
+            ? index + 1 < _day.Exercises.Count ? $"Próximo: {_plan.Exercises[index + 1].Name}" : "Último exercício"
+            : $"Série {completedSets + 1}";
+        _restDeadline = DateTimeOffset.UtcNow.AddSeconds(seconds);
+        _isResting = true;
+        UpdateCountdown();
+        _timer.Start();
+    }
+
+    private void EndRest()
+    {
+        _timer.Stop();
+        _restDeadline = null;
+        _isResting = false;
+        _restCountdown.Text = "00:00";
+
+        var index = _exercisePicker.SelectedIndex;
+        var exercise = _plan.Exercises[index];
+        var completedSets = _session?.Sets.Count(set => set.ExerciseId == exercise.Id) ?? 0;
+        var plannedSets = ParsePlannedSets(_day.Exercises[index].Sets);
+        if (plannedSets is not null && completedSets >= plannedSets)
+        {
+            if (index + 1 < _day.Exercises.Count)
             {
-                _session = App.Data.UpdateSet(_session.Id, setId, load, reps, rir, EmptyToNull(_notes.Text));
-                _status.Text = "Série atualizada.";
+                _load.Text = _reps.Text = string.Empty;
+                _exercisePicker.SelectedIndex = index + 1;
+                PrefillLoadFromLastSet();
             }
             else
             {
-                var snapshot = _plan.Exercises[_exercisePicker.SelectedIndex];
-                _session = App.Data.AddSet(_session.Id, snapshot.Id, load, reps, rir, EmptyToNull(_notes.Text));
-                _status.Text = $"Série {_session.Sets.Count(s => s.ExerciseId == snapshot.Id)} registrada.";
-                StartRest(load?.ToString("0.##", CultureInfo.CurrentCulture));
+                _allExercisesComplete = true;
             }
-            ClearCorrection();
-            RefreshSessionUi();
         }
-        catch (Exception ex) when (ex is InvalidOperationException or KeyNotFoundException or ArgumentException)
+        else
         {
-            _status.Text = $"Não foi possível salvar: {ex.Message}";
-        }
-    }
-
-    private void ClearCorrection()
-    {
-        _editingSetId = null;
-        _saveButton.Text = "Salvar série";
-        _load.Text = _reps.Text = _rir.Text = _notes.Text = null;
-    }
-
-    private async Task PauseAndExitAsync()
-    {
-        if (_session is null) return;
-        var hasPendingInput = !string.IsNullOrWhiteSpace(_load.Text) || !string.IsNullOrWhiteSpace(_reps.Text) ||
-            !string.IsNullOrWhiteSpace(_rir.Text) || !string.IsNullOrWhiteSpace(_notes.Text);
-        if (hasPendingInput)
-        {
-            var discard = await DisplayAlertAsync("Campos ainda não salvos",
-                "Os valores digitados nesta série não serão registrados se você sair agora. Deseja descartar os campos e pausar?",
-                "Descartar e pausar", "Continuar aqui");
-            if (!discard) return;
-            ClearCorrection();
-        }
-        PauseCurrentSession();
-        await Shell.Current.Navigation.PopAsync();
-    }
-
-    private async Task ResumeCurrentSessionAsync()
-    {
-        if (_session is not { CompletedUtc: null, PausedUtc: not null }) return;
-        var plan = new PlanDto(_session.PlanId, _session.PlanVersion, _day.Title, _session.PlanSnapshot);
-        var reviews = App.Data.EvaluatePlan(plan);
-        var blocked = reviews.Where(item => item.Evaluation.Decision is RestrictionDecision.Block or RestrictionDecision.RequiresReview).ToArray();
-        if (blocked.Length > 0)
-        {
-            await DisplayAlertAsync("Revisão necessária",
-                string.Join("\n", blocked.Select(item => item.Exercise.Name + ": é necessária uma revisão antes de retomar.")), "Entendi");
-            return;
-        }
-        var warnings = reviews.Where(item => item.Evaluation.Decision == RestrictionDecision.Warn).ToArray();
-        if (warnings.Length > 0)
-        {
-            var acknowledged = await DisplayAlertAsync("Aviso das suas restrições",
-                string.Join("\n", warnings.Select(item => item.Exercise.Name + ": há um aviso registrado. Confirme para retomar.")),
-                "Confirmar aviso", "Voltar");
-            if (!acknowledged) return;
-        }
-        try
-        {
-            _session = App.Data.ResumeSession(_session.Id);
+            _load.Text = _queuedLoad;
             PrefillLoadFromLastSet();
-            _status.Text = "Sessão retomada.";
-            RefreshSessionUi();
         }
-        catch (Exception ex) when (ex is InvalidOperationException or KeyNotFoundException)
+
+        _queuedLoad = null;
+        _status.Text = string.Empty;
+        RefreshSessionUi();
+    }
+
+    private int FindNextExerciseIndex(SessionDto session)
+    {
+        for (var index = 0; index < _day.Exercises.Count; index++)
         {
-            _status.Text = $"Não foi possível retomar: {ex.Message}";
+            var exerciseId = _plan.Exercises[index].Id;
+            var completedSets = session.Sets.Count(set => set.ExerciseId == exerciseId);
+            var plannedSets = ParsePlannedSets(_day.Exercises[index].Sets);
+            if (plannedSets is null ? completedSets == 0 : completedSets < plannedSets)
+                return index;
         }
+
+        return Math.Clamp(session.ActiveExerciseIndex, 0, Math.Max(0, _day.Exercises.Count - 1));
+    }
+
+    private bool IsWorkoutComplete(SessionDto session)
+    {
+        if (_day.Exercises.Count == 0) return false;
+        for (var index = 0; index < _day.Exercises.Count; index++)
+        {
+            var plannedSets = ParsePlannedSets(_day.Exercises[index].Sets);
+            if (plannedSets is null) return false;
+            var exerciseId = _plan.Exercises[index].Id;
+            if (session.Sets.Count(set => set.ExerciseId == exerciseId) < plannedSets)
+                return false;
+        }
+        return true;
+    }
+
+    private void PrefillLoadFromLastSet()
+    {
+        if (_session is null || _exercisePicker.SelectedIndex < 0 || !string.IsNullOrWhiteSpace(_load.Text)) return;
+        var exerciseId = _plan.Exercises[_exercisePicker.SelectedIndex].Id;
+        var lastLoad = _session.Sets
+            .Where(set => set.ExerciseId == exerciseId)
+            .OrderBy(set => set.Index)
+            .LastOrDefault()?.LoadKg;
+        if (lastLoad is not null)
+            _load.Text = lastLoad.Value.ToString("0.##", CultureInfo.CurrentCulture);
     }
 
     private void PauseCurrentSession()
@@ -454,10 +485,22 @@ public sealed class WorkoutSessionPage : ContentPage
             _restCountdown.Text = "00:00";
             RefreshSessionUi();
         }
-        catch (Exception ex) when (ex is InvalidOperationException or KeyNotFoundException)
+        catch (Exception exception) when (exception is InvalidOperationException or KeyNotFoundException)
         {
-            _status.Text = $"Não foi possível pausar a sessão: {ex.Message}";
+            ShowStatus($"Não foi possível pausar: {exception.Message}");
         }
+    }
+
+    private async Task PauseAndExitAsync()
+    {
+        if (_session is null) return;
+        if (!string.IsNullOrWhiteSpace(_load.Text) || !string.IsNullOrWhiteSpace(_reps.Text))
+        {
+            var discard = await DisplayAlertAsync("Sair do treino?", "Os valores desta série não salvos serão descartados.", "Sair", "Continuar");
+            if (!discard) return;
+        }
+        PauseCurrentSession();
+        await Shell.Current.Navigation.PopAsync();
     }
 
     private async Task FinishAsync()
@@ -465,75 +508,25 @@ public sealed class WorkoutSessionPage : ContentPage
         if (_session is null) return;
         if (_session.PausedUtc is not null)
         {
-            await DisplayAlertAsync("Retome o treino", "Retome a sessão antes de concluí-la.", "OK");
+            await DisplayAlertAsync("Treino pausado", "Retome para concluí-lo.", "OK");
             return;
         }
-        var confirm = await DisplayAlertAsync("Concluir treino?", "As séries registradas serão mantidas.", "Concluir", "Continuar");
-        if (!confirm) return;
+
         var elapsedSeconds = Math.Max(0, (DateTimeOffset.UtcNow - _session.StartedUtc).TotalSeconds - _session.TotalPausedSeconds);
         var minutes = Math.Max(0, (int)Math.Round(elapsedSeconds / 60));
         try
         {
             _finishing = true;
-            var completed = App.Data.CompleteSession(_session.Id, minutes, null);
-            _session = completed;
+            _session = App.Data.CompleteSession(_session.Id, minutes, null);
             _timer.Stop();
-            var exerciseCount = completed.Sets.Select(set => set.ExerciseId).Distinct().Count();
-            await DisplayAlertAsync("Treino salvo",
-                $"{exerciseCount} exercício(s) · {completed.Sets.Length} série(s) · {minutes} min. Registro salvo neste aparelho.",
-                "OK");
+            await DisplayAlertAsync("Treino salvo", $"{_session.Sets.Length} séries · {minutes} min", "OK");
             await Shell.Current.Navigation.PopAsync();
         }
-        catch (Exception ex) when (ex is InvalidOperationException or KeyNotFoundException)
+        catch (Exception exception) when (exception is InvalidOperationException or KeyNotFoundException)
         {
             _finishing = false;
-            _status.Text = $"Não foi possível concluir: {ex.Message}";
+            ShowStatus($"Não foi possível concluir: {exception.Message}");
         }
-    }
-
-    private void StartRest(string? nextLoad)
-    {
-        if (!int.TryParse(_restSeconds.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var seconds) || seconds is < 1 or > 7200)
-        {
-            _status.Text = "O descanso precisa ficar entre 1 e 7200 segundos.";
-            return;
-        }
-
-        var exercise = _plan.Exercises[_exercisePicker.SelectedIndex];
-        var completedSets = _session?.Sets.Count(set => set.ExerciseId == exercise.Id) ?? 0;
-        _queuedLoad = nextLoad;
-        _isResting = true;
-        _restHeading.Text = "DESCANSO";
-        _restNextSeries.Text = $"Próxima: série {completedSets + 1}";
-        _restButton.Text = "Encerrar descanso";
-        _restDeadline = DateTimeOffset.UtcNow.AddSeconds(seconds);
-        RefreshSessionUi();
-        UpdateCountdown();
-        _timer.Start();
-    }
-
-    private void EndRest()
-    {
-        _timer.Stop();
-        _restDeadline = null;
-        _isResting = false;
-        _restCountdown.Text = "00:00";
-        _load.Text = _queuedLoad;
-        _queuedLoad = null;
-        _status.Text = "Descanso encerrado. Ajuste a carga e registre a próxima série.";
-        RefreshSessionUi();
-    }
-
-    private void PrefillLoadFromLastSet()
-    {
-        if (_session is null || _exercisePicker.SelectedIndex < 0 || !string.IsNullOrWhiteSpace(_load.Text)) return;
-        var exerciseId = _plan.Exercises[_exercisePicker.SelectedIndex].Id;
-        var lastLoad = _session.Sets
-            .Where(set => set.ExerciseId == exerciseId)
-            .OrderBy(set => set.Index)
-            .LastOrDefault()?.LoadKg;
-        if (lastLoad is not null)
-            _load.Text = lastLoad.Value.ToString("0.##", CultureInfo.CurrentCulture);
     }
 
     private void UpdateCountdown()
@@ -544,8 +537,13 @@ public sealed class WorkoutSessionPage : ContentPage
         if (remaining == 0)
         {
             EndRest();
-            _status.Text = "Descanso concluído. Próxima série liberada.";
         }
+    }
+
+    private void ShowStatus(string message)
+    {
+        _status.Text = message;
+        _status.IsVisible = true;
     }
 
     private static Button SecondaryButton(string text) => new()
@@ -579,7 +577,7 @@ public sealed class WorkoutSessionPage : ContentPage
     {
         var snapshots = day.Exercises.Select(item =>
         {
-            var existing = catalog.FirstOrDefault(x => x.Name.Equals(item.Name, StringComparison.OrdinalIgnoreCase));
+            var existing = catalog.FirstOrDefault(exercise => exercise.Name.Equals(item.Name, StringComparison.OrdinalIgnoreCase));
             return existing is null
                 ? new ExerciseSnapshotDto(StableId($"{sheet.Id:N}:{day.Key}:{item.Order}:{item.Name}"), 1, item.Name, [], [])
                 : new ExerciseSnapshotDto(existing.Id, existing.Version, existing.Name, existing.MovementPatterns, existing.Equipment,
@@ -589,5 +587,4 @@ public sealed class WorkoutSessionPage : ContentPage
     }
 
     private static Guid StableId(string value) => new(SHA256.HashData(Encoding.UTF8.GetBytes(value)).AsSpan(0, 16));
-    private static string? EmptyToNull(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

@@ -9,8 +9,8 @@
     <Nullable>enable</Nullable>
     <ApplicationTitle>Pulso</ApplicationTitle>
     <ApplicationId>com.personalfitness.agent</ApplicationId>
-    <ApplicationDisplayVersion>0.1</ApplicationDisplayVersion>
-    <ApplicationVersion>1</ApplicationVersion>
+    <ApplicationDisplayVersion>0.5.1</ApplicationDisplayVersion>
+    <ApplicationVersion>6</ApplicationVersion>
     <SupportedOSPlatformVersion>23.0</SupportedOSPlatformVersion>
   </PropertyGroup>
   <ItemGroup>
@@ -21,6 +21,7 @@
     <MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
     <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
+    <PackageReference Include="Xamarin.AndroidX.DynamicAnimation" Version="1.1.0.3" />
     <ProjectReference Include="..\PersonalFitnessAgent.Core\PersonalFitnessAgent.Core.csproj" />
     <ProjectReference Include="..\PersonalFitnessAgent.Infrastructure.Sqlite\PersonalFitnessAgent.Infrastructure.Sqlite.csproj" />
   </ItemGroup>

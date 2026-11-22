@@ -4,8 +4,7 @@ namespace PersonalFitnessAgent.App;
 
 public enum ExerciseVideoPlayback
 {
-    Html5,
-    YouTubeEmbed
+    Html5
 }
 
 public sealed record ExerciseVideoAsset(
@@ -26,16 +25,15 @@ public static class ExerciseVideoCatalog
 {
     private const string PexelsLicenseUrl = "https://www.pexels.com/license/";
     private const string PublicDomainLicenseUrl = "https://creativecommons.org/publicdomain/mark/1.0/";
-    private const string YouTubeTermsUrl = "https://www.youtube.com/t/terms";
-
     private static readonly Dictionary<ExerciseMotion, ExerciseVideoAsset> Clips = new()
     {
-        [ExerciseMotion.SupportedRow] = YouTube(
+        [ExerciseMotion.SupportedRow] = Pexels(
             ExerciseMotion.SupportedRow,
-            "Remada com apoio no banco",
-            "0-DXJiceG-0",
-            "OPEX Fitness",
-            "https://www.youtube.com/watch?v=0-DXJiceG-0"),
+            "Remada sentada na polia",
+            "https://videos.pexels.com/video-files/35585654/15079810_1080_1920_30fps.mp4",
+            "https://images.pexels.com/videos/35585654/pexels-photo-35585654.jpeg?auto=compress&dpr=1&h=750&w=1260",
+            "khezez | خزاز",
+            "https://www.pexels.com/video/man-exercising-on-cable-machine-in-gym-35585654/"),
         [ExerciseMotion.CableRow] = Pexels(
             ExerciseMotion.CableRow,
             "Remada sentada na polia",
@@ -89,24 +87,25 @@ public static class ExerciseVideoCatalog
             "https://www.cdc.gov/physicalactivity/videos/Leg_Curl_Ipod-Lg.mp4",
             "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/14/Muscle_Strengthening_at_the_Gym_-_Leg_Curl.webm/250px--Muscle_Strengthening_at_the_Gym_-_Leg_Curl.webm.jpg",
             "https://commons.wikimedia.org/wiki/File:Muscle_Strengthening_at_the_Gym_-_Leg_Curl.webm"),
-        [ExerciseMotion.ReverseFly] = YouTube(
+        [ExerciseMotion.ReverseFly] = new ExerciseVideoAsset(
             ExerciseMotion.ReverseFly,
             "Voador inverso na máquina",
-            "vJYkqD7a0gM",
-            "Gerardi Performance",
-            "https://www.youtube.com/watch?v=vJYkqD7a0gM"),
-        [ExerciseMotion.BodyweightLunge] = new ExerciseVideoAsset(
+            "https://upload.wikimedia.org/wikipedia/commons/transcoded/a/ab/%EB%88%84%EA%B5%AC%EB%82%98_%EA%B0%80%EC%8A%B4%EC%9A%B4%EB%8F%99%EC%9D%84_%ED%95%B4%EC%95%BC_%ED%95%9C%EB%8B%A4%21_%ED%97%AC%EC%8A%A4%EC%9E%A5_%EA%B8%B0%EA%B5%AC_%ED%8E%99_%EB%8D%B1_%ED%94%8C%EB%9D%BC%EC%9D%B4_%26_%EB%A6%AC%EC%96%B4_%EB%8D%B8%ED%86%A0%EC%9D%B4%EB%93%9C_How_to_do_Pec_dec_fly_and_rear_deltoid.webm/%EB%88%84%EA%B5%AC%EB%82%98_%EA%B0%80%EC%8A%B4%EC%9A%B4%EB%8F%99%EC%9D%84_%ED%95%B4%EC%95%BC_%ED%95%9C%EB%8B%A4%21_%ED%97%AC%EC%8A%A4%EC%9E%A5_%EA%B8%B0%EA%B5%AC_%ED%8E%99_%EB%8D%B1_%ED%94%8C%EB%9D%BC%EC%9D%B4_%26_%EB%A6%AC%EC%96%B4_%EB%8D%B8%ED%86%A0%EC%9D%B4%EB%93%9C_How_to_do_Pec_dec_fly_and_rear_deltoid.webm.360p.mpeg4.mov",
+            "video/mp4",
+            "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ab/%EB%88%84%EA%B5%AC%EB%82%98_%EA%B0%80%EC%8A%B4%EC%9A%B4%EB%8F%99%EC%9D%84_%ED%95%B4%EC%95%BC_%ED%95%9C%EB%8B%A4%21_%ED%97%AC%EC%8A%A4%EC%9E%A5_%EA%B8%B0%EA%B5%AC_%ED%8E%99_%EB%8D%B1_%ED%94%8C%EB%9D%BC%EC%9D%B4_%26_%EB%A6%AC%EC%96%B4_%EB%8D%B8%ED%86%A0%EC%9D%B4%EB%93%9C_How_to_do_Pec_dec_fly_and_rear_deltoid.webm/960px--%EB%88%84%EA%B5%AC%EB%82%98_%EA%B0%80%EC%8A%B4%EC%9A%B4%EB%8F%99%EC%9D%84_%ED%95%B4%EC%95%BC_%ED%95%9C%EB%8B%A4%21_%ED%97%AC%EC%8A%A4%EC%9E%A5_%EA%B8%B0%EA%B5%AC_%ED%8E%99_%EB%8D%B1_%ED%94%8C%EB%9D%BC%EC%9D%B4_%26_%EB%A6%AC%EC%96%B4_%EB%8D%B8%ED%86%A0%EC%9D%B4%EB%93%9C_How_to_do_Pec_dec_fly_and_rear_deltoid.webm.jpg",
+            ExerciseVideoPlayback.Html5,
+            "심으뜸의 마이너스 라이프",
+            "Wikimedia Commons",
+            "https://commons.wikimedia.org/wiki/File:%EB%88%84%EA%B5%AC%EB%82%98_%EA%B0%80%EC%8A%B4%EC%9A%B4%EB%8F%99%EC%9D%84_%ED%95%B4%EC%95%BC_%ED%95%9C%EB%8B%A4!_%ED%97%AC%EC%8A%A4%EC%9E%A5_%EA%B8%B0%EA%B5%AC_%ED%8E%99_%EB%8D%B1_%ED%94%8C%EB%9D%BC%EC%9D%B4_%26_%EB%A6%AC%EC%96%B4_%EB%8D%B8%ED%86%A0%EC%9D%B4%EB%93%9C_How_to_do_Pec_dec_fly_and_rear_deltoid.webm",
+            "CC BY 3.0",
+            "https://creativecommons.org/licenses/by/3.0/"),
+        [ExerciseMotion.BodyweightLunge] = Pexels(
             ExerciseMotion.BodyweightLunge,
             "Passada à frente",
-            "https://upload.wikimedia.org/wikipedia/commons/0/02/Forward_lunge_training.webm",
-            "video/webm",
-            "https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/Forward_lunge_training.webm/500px--Forward_lunge_training.webm.jpg",
-            ExerciseVideoPlayback.Html5,
-            "Skhulile Mthiyane",
-            "Wikimedia Commons",
-            "https://commons.wikimedia.org/wiki/File:Forward_lunge_training.webm",
-            "CC BY-SA 4.0",
-            "https://creativecommons.org/licenses/by-sa/4.0/"),
+            "https://videos.pexels.com/video-files/4488004/4488004-hd_1080_1920_25fps.mp4",
+            "https://images.pexels.com/videos/4488004/crossfit-fit-fitness-girl-4488004.jpeg?auto=compress&dpr=1&h=750&w=1260",
+            "olia danilevich",
+            "https://www.pexels.com/video/woman-doing-leg-lunges-4488004/"),
         [ExerciseMotion.SeatedCurl] = Pexels(
             ExerciseMotion.SeatedCurl,
             "Rosca sentada com halteres",
@@ -160,22 +159,5 @@ public static class ExerciseVideoCatalog
             "Domínio público",
             PublicDomainLicenseUrl);
 
-    private static ExerciseVideoAsset YouTube(
-        ExerciseMotion motion,
-        string title,
-        string videoId,
-        string creator,
-        string sourcePageUrl) =>
-        new(
-            motion,
-            title,
-            $"https://www.youtube-nocookie.com/embed/{videoId}?rel=0&playsinline=1",
-            null,
-            $"https://img.youtube.com/vi/{videoId}/hqdefault.jpg",
-            ExerciseVideoPlayback.YouTubeEmbed,
-            creator,
-            "YouTube",
-            sourcePageUrl,
-            "Player incorporado do YouTube",
-            YouTubeTermsUrl);
+
 }

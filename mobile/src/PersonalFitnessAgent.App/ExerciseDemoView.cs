@@ -31,7 +31,7 @@ public sealed class ExerciseDemoView : ContentView
                 Padding = 18,
                 Content = new Label
                 {
-                    Text = "Vídeo indisponível para este movimento.",
+                    Text = "Demonstração em vídeo indisponível.",
                     FontSize = 13,
                     TextColor = Color.FromArgb("#A7B2BF"),
                     HorizontalTextAlignment = TextAlignment.Center,
@@ -91,28 +91,18 @@ public sealed class ExerciseDemoView : ContentView
 
     private static string BuildPlayerHtml(ExerciseVideoAsset clip)
     {
-        var player = clip.Playback switch
-        {
-            ExerciseVideoPlayback.YouTubeEmbed => $"""
-                <iframe src="{WebUtility.HtmlEncode(clip.VideoUrl)}"
-                        title="{WebUtility.HtmlEncode(clip.Title)}"
-                        style="width:100%;height:255px;border:0;background-color:#151C24"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                        allowfullscreen></iframe>
-                """,
-            _ => $"""
-                <video poster="{WebUtility.HtmlEncode(clip.PosterUrl ?? string.Empty)}"
-                       style="width:100%;height:255px;object-fit:contain;background-color:#151C24"
-                       controls autoplay muted loop playsinline preload="metadata"
-                       onerror="document.getElementById('fallback').style.display='block'">
-                  <source src="{WebUtility.HtmlEncode(clip.VideoUrl)}" type="{WebUtility.HtmlEncode(clip.VideoMimeType ?? "video/mp4")}">
-                  Este aparelho não conseguiu carregar o vídeo.
-                </video>
-                <div id="fallback" style="display:none;text-align:center;padding:12px">
-                  Vídeo indisponível. Use Fonte do vídeo.
-                </div>
-                """
-        };
+        var player = $"""
+            <video poster="{WebUtility.HtmlEncode(clip.PosterUrl ?? string.Empty)}"
+                   style="width:100%;height:255px;object-fit:contain;background-color:#151C24"
+                   controls autoplay muted loop playsinline preload="metadata"
+                   onerror="document.getElementById('fallback').style.display='block'">
+              <source src="{WebUtility.HtmlEncode(clip.VideoUrl)}" type="{WebUtility.HtmlEncode(clip.VideoMimeType ?? "video/mp4")}">
+              Este aparelho não conseguiu carregar o vídeo.
+            </video>
+            <div id="fallback" style="display:none;text-align:center;padding:12px">
+              Vídeo indisponível. Use Fonte do vídeo.
+            </div>
+            """;
 
         return $"""
             <!doctype html>
